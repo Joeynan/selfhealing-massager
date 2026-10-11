@@ -47,14 +47,18 @@ jobs:
         run: |
           @'
           from pathlib import Path
-          import mediapipe as mp
+          import sys, tempfile
+          sys.path.insert(0, str(Path('outputs/Watcher控制台/camera').resolve()))
+          from landmark_server import App
           model = Path('outputs/Watcher控制台/camera/hand_landmarker.task').resolve()
-          options = mp.tasks.vision.HandLandmarkerOptions(
-              base_options=mp.tasks.BaseOptions(model_asset_path=str(model), delegate=mp.tasks.BaseOptions.Delegate.CPU),
-              running_mode=mp.tasks.vision.RunningMode.LIVE_STREAM,
-              num_hands=2, result_callback=lambda result, image, timestamp: None)
-          with mp.tasks.vision.HandLandmarker.create_from_options(options):
-              print('Pinned CPU hand model loaded; no camera or device was opened.')
+          with tempfile.TemporaryDirectory() as directory:
+              app = App(directory)
+              app.initialize_model(model)
+              try:
+                  assert app.model_sha256 == 'fbc2a30080c3c557093b5ddfc334698132eb341044ccee322ccf8bcf3607cde1'
+                  print('Pinned CPU hand model loaded by the real service; no camera or device was opened.')
+              finally:
+                  app.model.close()
           '@ | & .\work\watcher-control-runtime\venv\Scripts\python.exe -
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: JavaScript parses without npm dependencies

@@ -6,8 +6,8 @@
       "sha256": "94967f0cea90ded548b22ea18de51bf25ad69170d947224f0d0eafe937264f18"
     },
     ".github/workflows/team-validation.yml": {
-      "bytes": 5526,
-      "sha256": "a3d5767b6318dbf273b8e84245e36ef01db4af14ace9a95c653976f4793b108f"
+      "bytes": 5594,
+      "sha256": "a921132236d5024bc7100ed896707e84eb78ea437b1f65fe24075a19f0e7002a"
     },
     ".gitignore": {
       "bytes": 2276,
@@ -27,15 +27,15 @@
     },
     "docs/交付验证/GitHub发布记录.json": {
       "bytes": 755,
-      "sha256": "1328830edc0fda092600a805264b4ebe59f5bf56296182aa570ce1eb910fdd7d"
+      "sha256": "7b5db3fd4f693eaae8827fc7a5d8b3b04a0e6312c65182fa74cb13f94b6ee460"
     },
     "docs/交付验证/GitHub发布记录.md": {
-      "bytes": 2453,
-      "sha256": "d27b71f6a82b1e694d86c572d660fca725c206a7f1fd4fa245b3e879fe067e94"
+      "bytes": 2495,
+      "sha256": "988cfa66d2baaf24c00ebf2097fb481422562ac25c4eabe6070e98aa58eb3d28"
     },
     "docs/交付验证/交付报告.json": {
       "bytes": 3657,
-      "sha256": "b6a8ec7ab62222a35a7f2a5a82ec462a4d9af498716fe42570a2f748bd954ab7"
+      "sha256": "91851c4b54d42a845515aae62aa8b37adc609df2095b78fec5742c644445e84b"
     },
     "docs/交付验证/交付报告.md": {
       "bytes": 4091,
@@ -82,8 +82,8 @@
       "sha256": "9551d0aba53af66c412a1683aa70af2e4bafaa4db117d0c9c6de799182f578d9"
     },
     "outputs/Watcher控制台/camera/landmark_server.py": {
-      "bytes": 14507,
-      "sha256": "66b5e2574bef08bb6a4514afa45f8a32568dc2294de3467134ff58814dd4d9f5"
+      "bytes": 14709,
+      "sha256": "91c6b2ca39020f5e80ddbc8ba71655b48a70272049673c526debb894de3da931"
     },
     "outputs/Watcher控制台/camera/requirements.txt": {
       "bytes": 80,
@@ -556,6 +556,10 @@
     "outputs/Watcher控制台/tests/test_migration_entrypoints.py": {
       "bytes": 11781,
       "sha256": "77557c5441a64980bba34910c7cc12d3b722d2aabff4e655b6239e7a72ddae9f"
+    },
+    "outputs/Watcher控制台/tests/test_model_unicode_path.py": {
+      "bytes": 1972,
+      "sha256": "56f95363ecfd23a2be9801ac14983789c223e172be2db24a5c81394465cf1673"
     },
     "outputs/Watcher控制台/tests/test_observation_v2.py": {
       "bytes": 11915,
@@ -7822,8 +7826,8 @@
       "sha256": "a2b8d5f4c729fdf15e5f8366b2027cc9561bfe0f298ac2a5951f603cf1a0ad35"
     }
   },
-  "file_count": 1955,
-  "bytes": 10903013,
+  "file_count": 1956,
+  "bytes": 10905297,
   "issues": [],
   "hardware_access": false
 }

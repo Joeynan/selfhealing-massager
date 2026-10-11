@@ -76,9 +76,12 @@ class App:
         self.mp=mp
         path=Path(model_path)
         if not path.is_file():raise FileNotFoundError('缺少手节点模型，请运行安装脚本')
-        self.model_sha256=hashlib.sha256(path.read_bytes()).hexdigest()
+        # Python supports Unicode paths; the native Windows model loader may not.
+        # Pass the exact hashed content instead of asking native code to reopen it.
+        model_bytes=path.read_bytes()
+        self.model_sha256=hashlib.sha256(model_bytes).hexdigest()
         options=mp.tasks.vision.HandLandmarkerOptions(
-            base_options=mp.tasks.BaseOptions(model_asset_path=str(path),delegate=mp.tasks.BaseOptions.Delegate.CPU),
+            base_options=mp.tasks.BaseOptions(model_asset_buffer=model_bytes,delegate=mp.tasks.BaseOptions.Delegate.CPU),
             running_mode=mp.tasks.vision.RunningMode.LIVE_STREAM,num_hands=2,
             min_hand_detection_confidence=.6,min_hand_presence_confidence=.6,min_tracking_confidence=.6,
             result_callback=self.on_result)
