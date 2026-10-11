@@ -1,0 +1,36 @@
+{
+  "idf_version": "6.0.1",
+  "sdk_commit": "8c19b156084a0753687347cca1f5355782893533",
+  "app_source_commit": "0d576d3d4c049c6f55eaf879725dc23e516511b4",
+  "dependencies_lock_sha256": "dcf11d0bfd08b7689556b6f3e6f698d5153a95ed743182616bddc528654f5e39",
+  "sdk_files": {
+    "tools/cmake/version.cmake": "0bf11cae7b647aefd8a50190eecf2dacb74745c709958de2b343e1d0ae4b586a",
+    "tools/idf.py": "e4a9136602ac630e322afb62988db849860ce08429fc146bf0f82c10b3db4cfa",
+    "CMakeLists.txt": "1954d3fcf99b849265e44230e7cd6e3a5efd0f05b1cf54625e496569341c3b49"
+  },
+  "sdk_path_file": {
+    "path": "tools/cmake/toolchain_flags.cmake",
+    "baseline_sha256": "a1c60723b11b19bdf5770bf3bfeb4a4bff3c84ee216bb9657eded6d8f5116b99",
+    "patched_sha256": "d2f3c9bec19d890a5de58087fd5fd02ca2fb40cf301b263fe736da542db8458f"
+  },
+  "sdk_path_patch_sha256": "5ce75bf7d348b52fb49ea58aa82339595293a5d6c9e38fc8431dfc8a344c600a",
+  "sscma_patch_sha256": "d2692a5e1decafa79e791da1990dcbe23e5d546c8bf2cc61cc5d56be3dff33bb",
+  "sscma_files": [
+    {
+      "path": "managed_components/wvirgil123__sscma_client/src/sscma_client_ops.c",
+      "baseline_sha256": "8a98e651dd8c9e160a092e7261809708f1d9fa828614f5e78926a939052101f7",
+      "patched_sha256": "24ef5667f27224b5627625e3b4791633e7362b6f19330154d690d16a1eebdf2d"
+    },
+    {
+      "path": "managed_components/wvirgil123__sscma_client/include/sscma_client_types.h",
+      "baseline_sha256": "133ece18c05ca06292cff123355f6d2ec8c7e8fd296d0efe6f52536f82972b32",
+      "patched_sha256": "033ebb68a53e145c43d34c4f6ee40367bd2deedf5dd02420530211e9d35d6732"
+    },
+    {
+      "path": "managed_components/wvirgil123__sscma_client/include/sscma_client_ops.h",
+      "baseline_sha256": "13178c0480a5a91941af1cdc7280080bf84104e290737a480aed76b2a76a0703",
+      "patched_sha256": "b204bb762084288dcc932f9adee78c39f104d38ebbe6fe985fe83c8688a53403"
+    }
+  ],
+  "note": "Source snapshots retain fixed upstream baseline metadata; exported SDKs without .git are checked by protected baseline file hashes. Hardening applies only to the three SSCMA managed files, never to the active gesture_service.cc."
+}

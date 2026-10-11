@@ -1,0 +1,16 @@
+{
+  "build_verified": true,
+  "chip": "esp32s3",
+  "address": "0x200000",
+  "device_mac": "10:b4:1d:e6:00:9c",
+  "app": "watcher-controller-v9-wheel-face.bin",
+  "bytes": 2879808,
+  "sha256": "fb4fe0e39777e3e5d0594b7662ad559fc3a42af490dd71064be9d42bea4cbece",
+  "version": "watcher-servo-controller-v9-wheel",
+  "ui_revision": "wheel-face-1",
+  "idf_version": "v6.0.1",
+  "source_commit": "0d576d3d4c049c6f55eaf879725dc23e516511b4",
+  "sdk_commit": "8c19b156084a0753687347cca1f5355782893533",
+  "physical_flash_verified": false,
+  "partition_bytes": 4194304
+}

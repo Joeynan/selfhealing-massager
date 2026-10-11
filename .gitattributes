@@ -1,0 +1,11 @@
+# Preserve snapshot bytes and manifest hashes on every platform.
+* -text
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ogg binary
+*.eaf binary
+*.ttf binary
+*.bin binary
+*.img binary
+*.task binary

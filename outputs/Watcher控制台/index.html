@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f5f1">
+  <title>Watcher 手势控制台</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/watcher_ui.css">
+  <script src="/watcher_ui.js" defer></script>
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <main class="workspace">
+    <header class="page-header">
+      <div><p class="eyebrow">WATCHER · ESP-12F</p><h1>手势控制台</h1><p class="page-intro">观察手势、模拟控制，确认三路舵机指令。</p></div>
+      <div class="service-status"><span class="status-dot" id="service-dot"></span><span id="service-text">正在连接控制台</span></div>
+    </header>
+
+    <aside class="runtime-notice" role="status"><strong id="runtime-mode">正在读取设备</strong><p id="runtime-detail">默认仅观察小智状态，等待设备回报识别模式。</p><p id="link-blocker">正在检查手势联动状态</p><p id="power-state">正在读取电源与显示页面</p></aside>
+
+    <section class="devices" aria-label="设备连接">
+      <div class="device">
+        <div class="device-heading"><h2>小智 Watcher</h2><span class="connection" id="watcher-connection">等待连接</span></div>
+        <dl><div><dt>IP</dt><dd id="watcher-ip">—</dd></div><div><dt>固件</dt><dd id="watcher-firmware">—</dd></div></dl>
+        <p class="device-error" id="watcher-error" hidden></p>
+      </div>
+      <div class="device">
+        <div class="device-heading"><h2>黑色板 ESP-12F</h2><span class="connection" id="client-connection">等待连接</span></div>
+        <dl><div><dt>IP</dt><dd id="client-ip">—</dd></div><div><dt>固件</dt><dd id="client-firmware">—</dd></div></dl>
+        <p class="device-error" id="client-error" hidden></p>
+      </div>
+    </section>
+
+    <section class="state-strip" aria-label="当前控制状态">
+      <div><p class="label">当前来源</p><p class="state-value" id="current-source">模拟控制</p><p class="subtle" id="source-detail">每次温和测试 2 秒后回中立</p></div>
+      <div><p class="label">请求手势</p><p class="state-value" id="requested-gesture">停止</p><p class="subtle" id="request-detail">等待状态更新</p></div>
+      <div class="confirmation"><p class="label">黑色板确认</p><p class="state-value" id="confirmed-gesture">等待回报</p><p class="subtle" id="confirmation-detail">连接后显示实际输出</p></div>
+      <div class="expression"><div class="expression-graphic" id="expression" role="img" aria-label="等待表情"></div><div><p class="label">小智表情预览</p><p class="expression-label" id="expression-label">等待</p><p class="subtle" id="display-state">等待设备回报</p></div></div>
+    </section>
+
+    <div class="work-grid">
+      <section class="camera-panel" aria-labelledby="camera-title">
+        <div class="section-heading"><h2 id="camera-title">Watcher 摄像头</h2><span class="connection" id="camera-connection">等待画面</span></div>
+        <div class="camera-lamp"><span id="camera-lamp-dot" class="lamp-dot"></span><span id="camera-lamp-text">小智摄像头灯：等待回报</span></div>
+        <div class="camera-stage" id="camera-stage">
+          <img id="camera-frame" alt="Watcher 摄像头实时画面" hidden>
+          <canvas id="hand-overlay" class="hand-overlay" aria-hidden="true" hidden></canvas>
+          <div class="camera-placeholder" id="camera-placeholder"><svg viewBox="0 0 48 48" width="48" height="48" aria-hidden="true"><path d="M8 14h8l3-5h10l3 5h8v25H8z"/><circle cx="24" cy="26" r="8"/></svg><p id="camera-placeholder-text">正在获取摄像头画面</p></div>
+          <span class="frame-mark" id="camera-frame-mark" hidden>实时画面</span>
+        </div>
+        <div class="camera-meta"><span id="camera-result">尚无手势</span><span id="camera-fps">— 帧 / 秒</span><span id="camera-age">—</span></div>
+        <p id="camera-confirmation" class="subtle" role="status">等待稳定确认</p>
+        <div class="node-tools"><label class="node-toggle"><input id="show-hand-nodes" type="checkbox" checked>显示手节点</label><span id="hand-node-count">0 只手 · 0 节点</span><span id="node-origin" class="subtle">等待识别来源</span></div>
+        <div class="camera-tools"><button class="secondary-button" id="calibrate-back" type="button" disabled>校准捶打手背</button><p class="subtle">握拳、拇指微开，手背正对镜头后点击。</p></div>
+        <p id="calibration-feedback" class="calibration-feedback" role="status" aria-live="polite"></p>
+      </section>
+
+      <section class="controls" aria-labelledby="controls-title">
+        <div class="section-heading"><h2 id="controls-title">控制与模拟</h2></div>
+        <fieldset class="source-selector"><legend>选择控制来源</legend><div class="segmented"><button id="source-onboard" type="button" aria-pressed="false" data-source="onboard">小智板上识别</button><button id="source-simulation" type="button" aria-pressed="true" data-source="simulation">模拟手势</button><button id="source-camera" type="button" aria-pressed="false" data-source="camera">Mac 摄像头诊断</button></div></fieldset>
+        <p class="control-help" id="control-help">点击一个手势，温和测试 2 秒后自动回中立。</p>
+        <div class="arm-controls">
+          <div class="arm-heading"><strong>舵机输出</strong><span id="servo-arm-state" class="connection">等待状态</span></div>
+          <div class="arm-buttons"><button id="servo-arm-enable" class="secondary-button" type="button" disabled>启用输出</button><button id="servo-arm-disable" class="secondary-button" type="button">禁用输出</button></div>
+          <p id="servo-enable-policy" class="subtle" role="status" aria-live="polite">持续默认启用；停止只回中立，禁用可暂停自动输出。</p>
+          <p id="servo-arm-feedback" class="inline-feedback" role="status" aria-live="polite">尚未提交手动启用或禁用请求</p>
+        </div>
+        <div class="gesture-buttons">
+          <button type="button" class="gesture-button" data-gesture="pounding"><span class="gesture-icon" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M10 17V9a2 2 0 0 1 4 0v5-7a2 2 0 0 1 4 0v7-6a2 2 0 0 1 4 0v6-4a2 2 0 0 1 4 0v10l-4 7H13l-5-8a2 2 0 0 1 3-2l3 3"/></svg></span><span><strong>捶打</strong><small>MOD1 · D1</small></span><span class="button-action">模拟</span></button>
+          <button type="button" class="gesture-button" data-gesture="kneading"><span class="gesture-icon" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M8 22c-4-4-2-11 4-13M24 10c4 4 2 11-4 13M8 9h5v5M24 23h-5v-5"/><circle cx="16" cy="16" r="3"/></svg></span><span><strong>揉搓</strong><small>MOD2 · D2</small></span><span class="button-action">模拟</span></button>
+          <button type="button" class="gesture-button" data-gesture="pinch"><span class="gesture-icon" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M8 24v-8a3 3 0 0 1 6 0v3l5-4a3 3 0 0 1 4 4l-6 7H9M14 9l3 2M22 7l-1 4M27 12l-3 2"/></svg></span><span><strong>轻捏</strong><small>MOD3 · D3</small></span><span class="button-action">模拟</span></button>
+        </div>
+        <button class="stop-button" id="stop-button" type="button"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>停止 / 全部回中立</button>
+        <p id="control-feedback" class="control-feedback" role="status" aria-live="polite">尚未发送控制指令</p>
+      </section>
+    </div>
+
+    <section class="servo-calibration" aria-labelledby="servo-calibration-title">
+      <div class="section-heading"><div><h2 id="servo-calibration-title">舵机校准</h2><p class="subtle">先短测单路，再记录实物表现。设备回报仅代表软件输出。</p></div><span id="servo-profile-state" class="connection">等待配置</span></div>
+      <div class="calibration-grid">
+        <div class="short-test">
+          <h3>单路短测</h3><p class="subtle" id="servo-test-guard">等待设备连接、配置同步和启用状态确认。</p>
+          <form id="servo-test-form">
+            <fieldset id="servo-test-fields" disabled><legend class="sr-only">单路舵机测试参数</legend>
+              <div class="test-fields"><label>通道<select id="servo-test-channel"><option value="1">1 · 捶打 / D1</option><option value="2">2 · 揉搓 / D2</option><option value="3">3 · 轻捏 / D3</option></select></label><label>脉宽 µs<input id="servo-test-pulse" type="number" min="1000" max="2000" step="1" value="1500" required></label><label>时长 ms<input id="servo-test-duration" type="number" min="100" max="500" step="1" value="500" required></label></div>
+              <div class="test-actions"><button type="button" class="secondary-button" id="servo-use-neutral">填入中立值</button><button type="button" class="secondary-button" id="servo-use-run">填入运行值</button><button class="secondary-button test-submit" type="submit">短测一次</button></div>
+            </fieldset>
+          </form>
+          <p id="servo-test-feedback" class="inline-feedback" role="status" aria-live="polite">每次最多 500 ms，结束后回中立。</p>
+          <div class="observations"><p class="label" id="observation-test-id">尚无短测记录</p><p class="subtle">观察实物后记录，不根据软件回报判断转动。</p><div class="observation-buttons"><button type="button" class="secondary-button" data-observation="moving" aria-pressed="false" disabled>已转动</button><button type="button" class="secondary-button" data-observation="stopped" aria-pressed="false" disabled>已停止</button><button type="button" class="secondary-button" data-observation="no_response" aria-pressed="false" disabled>无响应</button><button type="button" class="secondary-button" data-observation="abnormal" aria-pressed="false" disabled>异常</button></div><p id="servo-observation-feedback" class="inline-feedback" role="status" aria-live="polite"></p></div>
+        </div>
+        <div class="profile-editor">
+          <h3>三路中立与运行值</h3><p class="subtle" id="servo-profile-guard">仅模拟来源、停止且输出禁用时可修改。</p>
+          <form id="servo-profile-form"><fieldset id="servo-profile-fields" disabled><legend class="sr-only">三路舵机配置</legend>
+            <div class="profile-labels"><span>通道</span><span>中立 µs</span><span>运行 µs</span><span>频率</span></div>
+            <div class="profile-row"><span>1 · D1</span><input id="profile-neutral-0" aria-label="通道1中立脉宽" type="number" min="1400" max="1600" step="10" value="1500" required><input id="profile-run-0" aria-label="通道1运行脉宽" type="number" min="1410" max="2000" step="10" value="2000" required><span class="subtle">50 Hz</span></div>
+            <div class="profile-row"><span>2 · D2</span><input id="profile-neutral-1" aria-label="通道2中立脉宽" type="number" min="1400" max="1600" step="10" value="1500" required><input id="profile-run-1" aria-label="通道2运行脉宽" type="number" min="1410" max="2000" step="10" value="2000" required><span class="subtle">50 Hz</span></div>
+            <div class="profile-row"><span>3 · D3</span><input id="profile-neutral-2" aria-label="通道3中立脉宽" type="number" min="1400" max="1600" step="10" value="1500" required><input id="profile-run-2" aria-label="通道3运行脉宽" type="number" min="1410" max="2000" step="10" value="2000" required><span class="subtle">50 Hz</span></div>
+            <button class="secondary-button profile-save" type="submit">保存三路配置</button>
+          </fieldset></form><p id="servo-profile-feedback" class="inline-feedback" role="status" aria-live="polite">中立值按 10 µs 调整；运行值默认 2000 µs。</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="outputs" aria-labelledby="outputs-title">
+      <div class="section-heading"><div><h2 id="outputs-title">三路舵机输出</h2><p class="subtle">连续旋转舵机控制转速；中立值默认 1500 µs，实际停止请观察实物并校准。</p><p class="subtle">输出为板子回报；动作请观察实物。</p></div><span id="outputs-summary" class="output-summary">等待设备确认</span></div>
+      <div class="output-telemetry"><span id="ack-latency">指令往返：—</span><span id="output-profile-match">配置：等待回报</span></div>
+      <div class="table-scroll"><table><thead><tr><th scope="col">模式</th><th scope="col">手势</th><th scope="col">黑色板引脚</th><th scope="col">脉宽 µs</th><th scope="col">当前状态</th></tr></thead><tbody><tr id="output-1"><td>MOD1</td><td>捶打</td><td>D1 <span class="subtle">/ GPIO5</span></td><td class="pulse-value">—</td><td class="output-state">等待回报</td></tr><tr id="output-2"><td>MOD2</td><td>揉搓</td><td>D2 <span class="subtle">/ GPIO4</span></td><td class="pulse-value">—</td><td class="output-state">等待回报</td></tr><tr id="output-3"><td>MOD3</td><td>轻捏</td><td>D3 <span class="subtle">/ GPIO0</span></td><td class="pulse-value">—</td><td class="output-state">等待回报</td></tr></tbody></table></div>
+    </section>
+
+    <section class="logs" aria-labelledby="logs-title">
+      <div class="section-heading"><div><h2 id="logs-title">最近日志</h2><p class="subtle" id="logs-count">等待日志</p></div><div class="log-actions"><button type="button" class="secondary-button" id="refresh-logs">刷新日志</button><button type="button" class="secondary-button" id="export-logs">导出日志</button><button type="button" class="secondary-button" id="print-logs">打印日志</button></div></div>
+      <div class="log-list" id="log-list" role="log" aria-live="off"><p class="empty-logs">还没有日志。连接设备或发送模拟指令后会显示在这里。</p></div>
+      <p id="logs-feedback" class="subtle" role="status" aria-live="polite"></p>
+    </section>
+    <footer><span id="runtime-path">正在读取设备识别与控制路径</span><span id="last-update">尚未更新</span></footer>
+  </main>
+</body>
+</html>

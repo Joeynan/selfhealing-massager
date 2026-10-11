@@ -1,0 +1,45 @@
+候选范围与状态（2026-10-07）
+
+仅生成/验证 work 候选；本 agent 未修改 private SDK、release、硬件或服务。Root 已应用第一版候选到 private 构建树，尚需应用本次 delta 并全量构建。第一版 patch SHA256 是 1dc79025666fda08743dbe7dee33f5883c504ec0de823a087361fd9a30a7204d。
+
+应用方式
+- 在 Root 当前已应用第一版的 SDK 树，先 git apply --check sdk-hardening-lifecycle-delta.patch，再 apply 该 delta；不要再次 apply 完整 patch。
+- sdk-hardening-lifecycle-delta.patch SHA256：95b9c8ce5b122c1b0fa177d0c013227201b21fd4f5b9ea6e00c38bf10206c5bc。
+- 从原始固定基线重建时使用完整 sdk-hardening.patch，SHA256：d2692a5e1decafa79e791da1990dcbe23e5d546c8bf2cc61cc5d56be3dff33bb。原始 SHA 在 sdk-hardening-source-manifest.txt，原始源码备份在 sdk-hardening-original-baseline。
+- types.h 新增 mutex 字段会改变公开 struct 布局，必须全量重建 SDK 与全部依赖对象，不可仅替换 ops.o。
+
+请求生命周期防护
+- per-client request_mutex 在任何 SDK 任务创建之前初始化，保护列表插入、摘链、三处 dispatcher 遍历以及向匹配请求队列的非阻塞发送。
+- SPI I/O、阻塞等待、JSON 解析、callback、reply_clear 均在锁外。
+- request 超时/写入失败后先互斥摘链，再 drain 回复队列、delete 队列、free request。dispatcher 无法继续持有已摘链队列引用。
+- 修复 request malloc 空指针、queue 创建失败时未初始化 ListItem、删除空队列；修复 client malloc 后先 memset 的 OOM 缺陷。
+
+创建/销毁与真实双核内核依据
+- 先 suspend 两个 worker，有界等待至双方 eTaskGetState == eSuspended；任一仍 Running/其他状态则不 delete/free。等待上限 100ms。
+- 当前固定 IDF 使用 FreeRTOS-Kernel/tasks.c：taskIS_CURRENTLY_RUNNING（215）检查两个 core；eTaskGetState（1624-1676）先在 xKernelLock 下检查 Running；vTaskSuspend（1964-2100）请求远核 yield，并不保证返回时已停稳；vTaskDelete（1385-1461）只有非 Running 路径同步 prvDeleteTCB。故不能把直接 vTaskDelete 或 host 同步 mock 当作 SMP 停稳保证。
+- 在 owner 阻止并发 task resume/API 的合同下，确认双方 eSuspended 后 delete 才可同步释放静态 TCB/stack。Delete 后不再对旧句柄调用 eTaskGetState。
+- del 明确拒绝 inited=true 和 active request。调用者必须预先停止 callback、I/O、外部 API/resume；不能从 worker callback 销毁自身。App 无运行中 del，不改变正常运行流程。
+- mutex 获取及 worker 等待各有 100ms 上限。失败返回 TIMEOUT，所有资源和句柄保留，安静后可重试；构造失败 worker 无法停止时，保留未发布的隔离 client、日志提示 cleanup deferred 并返回 TIMEOUT。这个罕见路径会泄露隔离资源，避免远核 UAF；不提供自动回收承诺。
+- runtime 并发关闭需要独立关闭握手/引用计数，不在本候选范围。对任意持锁回调强制 suspend 并不安全。
+
+确定的 buffer/reply 修复
+- rx_buffer_size、tx_buffer_size 必须正数；分配 RX size+1，并检查 size < SIZE_MAX。read 容量 len 保持原值，满容量 data[pos]=0 有独立终止字节。
+- dispatcher 的 INIT reset 在 reset queue 前逐项 receive+reply_clear；它是该队列唯一 producer，monitor 已接走的本地 reply 不碰。tasks 停稳后 del/构造失败亦 drain 再删除队列。
+- reset/register_callback/ota_start 的 process suspend 前先获得 request mutex，挂起后即释放。只避免挂起 mutex 持有者；不宣称这些基线 reset 流程具备完整跨核 I/O 静止握手。
+
+已有验证
+- 生命周期/INIT/RX host 模型：23 场景绿色。覆盖 12 个构造分配失败点、不同 worker 停稳延迟、停止超时资源保留/重试、初始化拒绝、self-delete、mutex 忙、queue drain、monitor-owned reply 保留、RX 零/负/INT_MAX 大小边界。
+- ASan/UBSan 补充检查首个 host case 超过 10s，已终止；没有 sanitizer 通过结论。正常 host 回归仍为 23/23 绿色。
+- actual request 函数 5 项回归绿色；最初原始基线的 5 项均红。测试仅抽取真实函数/INIT 片段并替换 RTOS/IO，不是实机 SMP 或正常完整 process 路径验收。
+- delta 在 Root 第一版 private 树 apply-check 成功；整个候选 ops.c 使用当前 S3 compile_commands 参数 -fsyntax-only 成功，日志 sdk-hardening-check.log。
+- control_code_review 独立复核确认没有剩余生命周期 P1 阻塞；完整链接、烧录及连续运行由 Root 完成。
+
+隔离截图诊断
+- disable-screen-endpoint.patch 只让 GET /screen 返回明确 503，保留正常 UI、动画、相机和 MCP 截图函数。是临时隔离措施，不代表根因解决。Root 当前已改变此 endpoint，原 patch 的正向 apply-check 不再适用。
+- 不调用 /screen 也已发生离线，因此不能把截图或 SDK race 直接认定为唯一现场失联原因。
+
+部署与验证建议
+1. 保留回滚，full clean build，记录固定 SDK/config/compiler 及 bin SHA；先禁用输出预览。
+2. 连续相机运行至少 15 分钟，关联 frame/session、request timeout、两核 task high-water、PSRAM/internal largest-free-block、heap 完整性、reset reason、Wi-Fi 事件。串口保持连续，避免重新打开触发复位丢证据。
+3. 注入回复于 750ms timeout 前后、queue 满/重复回复/OOM，确认无死锁/UAF/持续 reply 泄漏；执行停稳/超时重试必须在真 S3 验证。
+4. 回归 5 秒保持/刷新/切换、无手/相机/断线停止、启用前缓存与截止保护；机械运动由用户自行短测，日志不把 APPLIED 当作实际停转。

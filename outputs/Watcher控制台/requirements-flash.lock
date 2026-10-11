@@ -1,0 +1,21 @@
+# Python 3.12; complete portable esptool 5.4.0 dependency set
+bitarray==3.12.0
+bitstring==4.4.0
+cffi==2.1.1
+click==8.1.8
+colorama==0.4.6
+cryptography==46.0.7
+esp-pylib==1.2.0
+esptool==5.4.0
+intelhex==2.3.0
+markdown-it-py==4.2.0
+mdurl==0.1.2
+pycparser==3.0
+Pygments==2.21.0
+pyserial==3.5
+PyYAML==6.0.3
+reedsolo==1.7.0
+rich-click==1.9.9
+rich==15.0.0
+tibs==0.5.7
+websockets==17.2

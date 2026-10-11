@@ -1,0 +1,11 @@
+{
+  "build_verified": true,
+  "chip": "esp32s3",
+  "address": "0x200000",
+  "device_mac": "10:b4:1d:e6:00:9c",
+  "app": "watcher-controller-v8-continuous-output.bin",
+  "bytes": 3013408,
+  "sha256": "319edfdc630860f65c453ab4eeaca90a378a59741e5ba938f1e368db7c3cbc9e",
+  "version": "watcher-controller-v8-continuous-output",
+  "note": "历史已验证应用镜像；本次未重新烧录"
+}

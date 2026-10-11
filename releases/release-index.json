@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "asset": "selfhealing-watcher-v9.zip",
+  "asset_bytes": 3530886,
+  "asset_sha256": "fa4a3fdb3d3242f622feae7e70b45fb2f55c1f31ce725738e8442a3ccb498373",
+  "download_url": null,
+  "publication_state": "prepared_not_uploaded",
+  "applications": [
+    {
+      "version": "watcher-servo-controller-v9-wheel",
+      "app": "watcher-controller-v9-wheel-face.bin",
+      "bytes": 2879808,
+      "sha256": "fb4fe0e39777e3e5d0594b7662ad559fc3a42af490dd71064be9d42bea4cbece"
+    },
+    {
+      "version": "watcher-controller-v8-continuous-output",
+      "app": "上一版回滚/watcher-controller-v8-continuous-output.bin",
+      "bytes": 3013408,
+      "sha256": "319edfdc630860f65c453ab4eeaca90a378a59741e5ba938f1e368db7c3cbc9e"
+    }
+  ],
+  "device_mac": "10:b4:1d:e6:00:9c",
+  "application_address": "0x200000",
+  "esptool_version": "5.4.0",
+  "black_firmware": "esp8266-servo-controller-v7 (build locally with private Wi-Fi)",
+  "vision": {
+    "required_preinstalled": true,
+    "bytes": 585728,
+    "sha256": "af4241e1f085b337659d8eb5c42f32ebba7e240899fb697bfde02f594e5f4b4a",
+    "note": "Existing WE2 Wi-Fi camera firmware; no visual firmware update in this handoff"
+  },
+  "hardware_access": false
+}

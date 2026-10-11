@@ -1,0 +1,559 @@
+--- a/managed_components/wvirgil123__sscma_client/src/sscma_client_ops.c
++++ b/managed_components/wvirgil123__sscma_client/src/sscma_client_ops.c
+@@ -1,4 +1,5 @@
+ #include <stdlib.h>
++#include <stdint.h>
+ #include <string.h>
+ #include <sys/cdefs.h>
+ #include "sdkconfig.h"
+@@ -14,6 +15,7 @@
+ #include "freertos/task.h"
+ #include "freertos/queue.h"
+ #include "freertos/list.h"
++#include "freertos/semphr.h"
+ #include "cJSON.h"
+ #include "mbedtls/base64.h"
+ 
+@@ -203,6 +205,15 @@
+     }
+ }
+ 
++static void sscma_client_drain_reply_queue(QueueHandle_t queue)
++{
++    sscma_client_reply_t queued;
++    while (xQueueReceive(queue, &queued, 0) == pdTRUE)
++    {
++        sscma_client_reply_clear(&queued);
++    }
++}
++
+ static void sscma_client_process(void *arg)
+ {
+     size_t rlen = 0;
+@@ -278,7 +289,10 @@
+                             {
+                                 if (name != NULL && strnstr(name->valuestring, EVENT_INIT, strlen(name->valuestring)) != NULL)
+                                 {
+-                                    xQueueReset(client->reply_queue); // reset reply queue
++                                    // Only this dispatcher produces asynchronous replies.
++                                    // The monitor owns anything it has already received.
++                                    sscma_client_drain_reply_queue(client->reply_queue);
++                                    xQueueReset(client->reply_queue);
+                                     if (xQueueSend(client->reply_queue, &reply, 0) != pdTRUE)
+                                     {
+                                         sscma_client_reply_clear(&reply);
+@@ -291,6 +305,8 @@
+                             {
+                                 sscma_client_request_t *first_req, *next_req = NULL;
+                                 bool found = false;
++                                bool discard_reply = false;
++                                xSemaphoreTake(client->request_mutex, portMAX_DELAY);
+                                 if (listCURRENT_LIST_LENGTH(client->request_list) > (UBaseType_t)0)
+                                 {
+                                     listGET_OWNER_OF_NEXT_ENTRY(first_req, client->request_list);
+@@ -304,13 +320,18 @@
+                                                 found = true;
+                                                 if (xQueueSend(next_req->reply, &reply, 0) != pdTRUE)
+                                                 {
+-                                                    sscma_client_reply_clear(&reply); // discard this reply
++                                                    discard_reply = true;
+                                                 }
+                                                 break;
+                                             }
+                                         }
+                                     }
+                                     while (next_req != first_req);
++                                }
++                                xSemaphoreGive(client->request_mutex);
++                                if (discard_reply)
++                                {
++                                    sscma_client_reply_clear(&reply);
+                                 }
+                                 if (!found)
+                                 {
+@@ -341,6 +362,8 @@
+                                     }
+                                     sscma_client_request_t *first_req, *next_req = NULL;
+                                     bool found = false;
++                                    bool discard_reply = false;
++                                    xSemaphoreTake(client->request_mutex, portMAX_DELAY);
+                                     if (listCURRENT_LIST_LENGTH(client->request_list) > (UBaseType_t)0)
+                                     {
+                                         listGET_OWNER_OF_NEXT_ENTRY(first_req, client->request_list);
+@@ -354,13 +377,18 @@
+                                                     found = true;
+                                                     if (xQueueSend(next_req->reply, &reply, 0) != pdTRUE)
+                                                     {
+-                                                        sscma_client_reply_clear(&reply); // discard this reply
++                                                        discard_reply = true;
+                                                     }
+                                                     break;
+                                                 }
+                                             }
+                                         }
+                                         while (next_req != first_req);
++                                    }
++                                    xSemaphoreGive(client->request_mutex);
++                                    if (discard_reply)
++                                    {
++                                        sscma_client_reply_clear(&reply);
+                                     }
+                                     if (!found)
+                                     {
+@@ -384,6 +412,7 @@
+                                 sscma_client_request_t *first_req, *next_req = NULL;
+                                 bool found = false;
+                                 // discard all the events while AT+BREAK is found
++                                xSemaphoreTake(client->request_mutex, portMAX_DELAY);
+                                 if (listCURRENT_LIST_LENGTH(client->request_list) > (UBaseType_t)0)
+                                 {
+                                     listGET_OWNER_OF_NEXT_ENTRY(first_req, client->request_list);
+@@ -398,6 +427,7 @@
+                                     }
+                                     while (next_req != first_req);
+                                 }
++                                xSemaphoreGive(client->request_mutex);
+                                 if (client->on_event == NULL || found || xQueueSend(client->reply_queue, &reply, 0) != pdTRUE)
+                                 {
+                                     sscma_client_reply_clear(&reply); // discard this reply
+@@ -432,6 +462,52 @@
+     }
+ }
+ 
++static bool sscma_client_stop_tasks(sscma_client_handle_t client, TickType_t timeout)
++{
++    TaskHandle_t current = xTaskGetCurrentTaskHandle();
++    if ((client->process_task.handle && current == client->process_task.handle) ||
++        (client->monitor_task.handle && current == client->monitor_task.handle))
++    {
++        return false;
++    }
++    if (client->process_task.handle)
++    {
++        vTaskSuspend(client->process_task.handle);
++    }
++    if (client->monitor_task.handle)
++    {
++        vTaskSuspend(client->monitor_task.handle);
++    }
++    TickType_t started = xTaskGetTickCount();
++    for (;;)
++    {
++        bool process_stopped = !client->process_task.handle || eTaskGetState(client->process_task.handle) == eSuspended;
++        bool monitor_stopped = !client->monitor_task.handle || eTaskGetState(client->monitor_task.handle) == eSuspended;
++        if (process_stopped && monitor_stopped)
++        {
++            break;
++        }
++        if ((TickType_t)(xTaskGetTickCount() - started) >= timeout)
++        {
++            return false;
++        }
++        vTaskDelay(1);
++    }
++    // The owner must prevent concurrent API/resume calls. On this IDF kernel,
++    // deleting an eSuspended task is synchronous, unlike remote eRunning tasks.
++    if (client->process_task.handle)
++    {
++        vTaskDelete(client->process_task.handle);
++        client->process_task.handle = NULL;
++    }
++    if (client->monitor_task.handle)
++    {
++        vTaskDelete(client->monitor_task.handle);
++        client->monitor_task.handle = NULL;
++    }
++    return true;
++}
++
+ esp_err_t sscma_client_new(const sscma_client_io_handle_t io, const sscma_client_config_t *config, sscma_client_handle_t *ret_client)
+ {
+ #if CONFIG_SSCMA_ENABLE_DEBUG_LOG
+@@ -441,9 +517,12 @@
+     BaseType_t res;
+     sscma_client_handle_t client = NULL;
+     ESP_GOTO_ON_FALSE(io && config && ret_client, ESP_ERR_INVALID_ARG, err, TAG, "invalid argument");
+-    client = (sscma_client_handle_t)malloc(sizeof(struct sscma_client_t));
+-    memset(client, 0, sizeof(struct sscma_client_t));
++    *ret_client = NULL;
++    ESP_GOTO_ON_FALSE(config->rx_buffer_size > 0 && config->tx_buffer_size > 0 &&
++        (size_t)config->rx_buffer_size < SIZE_MAX, ESP_ERR_INVALID_ARG, err, TAG, "invalid buffer size");
++    client = (sscma_client_handle_t)calloc(1, sizeof(struct sscma_client_t));
+     ESP_GOTO_ON_FALSE(client, ESP_ERR_NO_MEM, err, TAG, "no mem for sscma client");
++    client->reset_gpio_num = config->reset_gpio_num;
+     client->io = io;
+     client->inited = false;
+     client->flasher = NULL;
+@@ -466,7 +545,8 @@
+         }
+     }
+ 
+-    client->rx_buffer.data = (char *)malloc(config->rx_buffer_size);
++    // Keep the read capacity unchanged and reserve its full-buffer terminator.
++    client->rx_buffer.data = (char *)malloc((size_t)config->rx_buffer_size + 1);
+     ESP_GOTO_ON_FALSE(client->rx_buffer.data, ESP_ERR_NO_MEM, err, TAG, "no mem for rx buffer");
+     client->rx_buffer.pos = 0;
+     client->rx_buffer.len = config->rx_buffer_size;
+@@ -483,11 +563,12 @@
+ 
+     client->request_list = (List_t *)malloc(sizeof(List_t));
+     ESP_GOTO_ON_FALSE(client->request_list, ESP_ERR_NO_MEM, err, TAG, "no mem for request list");
++    vListInitialise(client->request_list);
++    client->request_mutex = xSemaphoreCreateMutex();
++    ESP_GOTO_ON_FALSE(client->request_mutex, ESP_ERR_NO_MEM, err, TAG, "no mem for request mutex");
+ 
+     client->reply_queue = xQueueCreate(config->event_queue_size, sizeof(sscma_client_reply_t));
+     ESP_GOTO_ON_FALSE(client->reply_queue, ESP_ERR_NO_MEM, err, TAG, "no mem for reply queue");
+-
+-    vListInitialise(client->request_list);
+ 
+ #ifdef CONFIG_SSCMA_PROCESS_TASK_STACK_ALLOC_EXTERNAL
+     client->process_task.task = heap_caps_calloc(1, sizeof(StaticTask_t), MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+@@ -561,107 +642,13 @@
+ err:
+     if (client)
+     {
+-        if (client->rx_buffer.data)
+-        {
+-            free(client->rx_buffer.data);
+-        }
+-        if (client->tx_buffer.data)
+-        {
+-            free(client->tx_buffer.data);
+-        }
+-        if (config->reset_gpio_num >= 0)
+-        {
+-            if (!config->flags.reset_use_expander)
+-            {
+-                gpio_reset_pin(client->reset_gpio_num);
+-            }
+-        }
+-        if (client->reply_queue)
+-        {
+-            vQueueDelete(client->reply_queue);
+-        }
+-        if (client->request_list)
+-        {
+-            free(client->request_list);
+-        }
+-        if (client->process_task.handle)
+-        {
+-            vTaskDelete(client->process_task.handle);
+-#ifdef CONFIG_SSCMA_PROCESS_TASK_STACK_ALLOC_EXTERNAL
+-            if (client->process_task.stack)
+-            {
+-                free(client->process_task.stack);
+-            }
+-            if (client->process_task.task)
+-            {
+-                free(client->process_task.task);
+-            }
+-#endif
+-        }
+-        if (client->monitor_task.handle)
+-        {
+-            vTaskDelete(client->monitor_task.handle);
+-#ifdef CONFIG_SSCMA_MONITOR_TASK_STACK_ALLOC_EXTERNAL
+-            if (client->monitor_task.stack)
+-            {
+-                free(client->monitor_task.stack);
+-            }
+-            if (client->monitor_task.task)
+-            {
+-                free(client->monitor_task.task);
+-            }
+-#endif
+-        }
+-        free(client);
+-    }
+-    return ret;
+-}
+-
+-esp_err_t sscma_client_del(sscma_client_handle_t client)
+-{
+-    if (client)
+-    {
+-        if (client->reset_gpio_num >= 0)
+-        {
+-            if (client->io_expander)
+-            {
+-                esp_io_expander_set_dir(client->io_expander, client->reset_gpio_num, IO_EXPANDER_OUTPUT);
+-                esp_io_expander_set_level(client->io_expander, client->reset_gpio_num, client->reset_level);
+-                esp_io_expander_set_dir(client->io_expander, client->reset_gpio_num, IO_EXPANDER_INPUT);
+-            }
+-            else
+-            {
+-                gpio_config_t io_conf = {
+-                    .mode = GPIO_MODE_OUTPUT,
+-                    .pin_bit_mask = 1ULL << client->reset_gpio_num,
+-                };
+-                gpio_config(&io_conf);
+-                gpio_set_level(client->reset_gpio_num, client->reset_level);
+-                gpio_reset_pin(client->reset_gpio_num);
+-            }
+-        }
+-        vQueueDelete(client->reply_queue);
+-
+-        sscma_client_request_t *first_req, *next_req = NULL;
+-        if (listCURRENT_LIST_LENGTH(client->request_list) > (UBaseType_t)0)
+-        {
+-            listGET_OWNER_OF_NEXT_ENTRY(first_req, client->request_list);
+-            do
+-            {
+-                listGET_OWNER_OF_NEXT_ENTRY(next_req, client->request_list);
+-                uxListRemove(&(next_req->item));
+-                vQueueDelete(next_req->reply);
+-                free(next_req);
+-            }
+-            while (next_req != first_req);
+-        }
+-
+-        free(client->request_list);
+-        free(client->rx_buffer.data);
+-        free(client->tx_buffer.data);
+-        vTaskDelete(client->process_task.handle);
+-        vTaskDelete(client->monitor_task.handle);
+-
++        if (!sscma_client_stop_tasks(client, pdMS_TO_TICKS(100)))
++        {
++            // An unpublished client is retained if a remote worker cannot stop.
++            // Leaking isolated resources is safer than freeing an active TCB.
++            ESP_LOGE(TAG, "construction cleanup deferred: workers did not suspend");
++            return ESP_ERR_TIMEOUT;
++        }
+ #ifdef CONFIG_SSCMA_PROCESS_TASK_STACK_ALLOC_EXTERNAL
+         free(client->process_task.stack);
+         free(client->process_task.task);
+@@ -670,6 +657,100 @@
+         free(client->monitor_task.stack);
+         free(client->monitor_task.task);
+ #endif
++        if (client->rx_buffer.data)
++        {
++            free(client->rx_buffer.data);
++        }
++        if (client->tx_buffer.data)
++        {
++            free(client->tx_buffer.data);
++        }
++        if (config->reset_gpio_num >= 0)
++        {
++            if (!config->flags.reset_use_expander)
++            {
++                gpio_reset_pin(client->reset_gpio_num);
++            }
++        }
++        if (client->reply_queue)
++        {
++            sscma_client_drain_reply_queue(client->reply_queue);
++            vQueueDelete(client->reply_queue);
++        }
++        if (client->request_mutex)
++        {
++            vSemaphoreDelete(client->request_mutex);
++        }
++        if (client->request_list)
++        {
++            free(client->request_list);
++        }
++        free(client);
++    }
++    return ret;
++}
++
++esp_err_t sscma_client_del(sscma_client_handle_t client)
++{
++    if (client)
++    {
++        // Runtime shutdown needs an explicit quiescence API; this function only
++        // destroys an uninitialized/stopped client with no external API callers.
++        if (client->inited)
++        {
++            return ESP_ERR_INVALID_STATE;
++        }
++        if (xSemaphoreTake(client->request_mutex, pdMS_TO_TICKS(100)) != pdTRUE)
++        {
++            return ESP_ERR_TIMEOUT;
++        }
++        if (listCURRENT_LIST_LENGTH(client->request_list) != 0)
++        {
++            xSemaphoreGive(client->request_mutex);
++            return ESP_ERR_INVALID_STATE;
++        }
++        if (!sscma_client_stop_tasks(client, pdMS_TO_TICKS(100)))
++        {
++            xSemaphoreGive(client->request_mutex);
++            return ESP_ERR_TIMEOUT;
++        }
++        xSemaphoreGive(client->request_mutex);
++        if (client->reset_gpio_num >= 0)
++        {
++            if (client->io_expander)
++            {
++                esp_io_expander_set_dir(client->io_expander, client->reset_gpio_num, IO_EXPANDER_OUTPUT);
++                esp_io_expander_set_level(client->io_expander, client->reset_gpio_num, client->reset_level);
++                esp_io_expander_set_dir(client->io_expander, client->reset_gpio_num, IO_EXPANDER_INPUT);
++            }
++            else
++            {
++                gpio_config_t io_conf = {
++                    .mode = GPIO_MODE_OUTPUT,
++                    .pin_bit_mask = 1ULL << client->reset_gpio_num,
++                };
++                gpio_config(&io_conf);
++                gpio_set_level(client->reset_gpio_num, client->reset_level);
++                gpio_reset_pin(client->reset_gpio_num);
++            }
++        }
++        sscma_client_drain_reply_queue(client->reply_queue);
++        vQueueDelete(client->reply_queue);
++
++        vSemaphoreDelete(client->request_mutex);
++
++        free(client->request_list);
++        free(client->rx_buffer.data);
++        free(client->tx_buffer.data);
++
++#ifdef CONFIG_SSCMA_PROCESS_TASK_STACK_ALLOC_EXTERNAL
++        free(client->process_task.stack);
++        free(client->process_task.task);
++#endif
++#ifdef CONFIG_SSCMA_MONITOR_TASK_STACK_ALLOC_EXTERNAL
++        free(client->monitor_task.stack);
++        free(client->monitor_task.task);
++#endif
+ 
+         if (client->info.id != NULL)
+         {
+@@ -747,7 +828,9 @@
+ esp_err_t sscma_client_reset(sscma_client_handle_t client)
+ {
+     esp_err_t ret = ESP_OK;
++    xSemaphoreTake(client->request_mutex, portMAX_DELAY);
+     vTaskSuspend(client->process_task.handle);
++    xSemaphoreGive(client->request_mutex);
+ 
+     client->rx_buffer.pos = 0;
+     client->tx_buffer.pos = 0;
+@@ -803,7 +886,9 @@
+ 
+ esp_err_t sscma_client_register_callback(sscma_client_handle_t client, const sscma_client_callback_t *callback, void *user_ctx)
+ {
++    xSemaphoreTake(client->request_mutex, portMAX_DELAY);
+     vTaskSuspend(client->process_task.handle);
++    xSemaphoreGive(client->request_mutex);
+ 
+     if (client->on_event != NULL)
+     {
+@@ -835,6 +920,8 @@
+     {
+         request = (sscma_client_request_t *)__malloc(sizeof(sscma_client_request_t));
+         ESP_GOTO_ON_FALSE(request, ESP_ERR_NO_MEM, err, TAG, "no mem for request");
++        vListInitialiseItem(&(request->item));
++        listSET_LIST_ITEM_OWNER(&(request->item), request);
+         request->reply = xQueueCreate(1, sizeof(sscma_client_reply_t));
+         strncpy(request->cmd, &cmd[CMD_PREFIX_LEN], sizeof(request->cmd) - 1);
+         request->cmd[sizeof(request->cmd) - 1] = '\0';
+@@ -846,9 +933,9 @@
+             }
+         }
+         ESP_GOTO_ON_FALSE(request->reply, ESP_ERR_NO_MEM, err, TAG, "no mem for reply");
+-        vListInitialiseItem(&(request->item));
+-        listSET_LIST_ITEM_OWNER(&(request->item), request);
++        xSemaphoreTake(client->request_mutex, portMAX_DELAY);
+         vListInsertEnd(client->request_list, &(request->item));
++        xSemaphoreGive(client->request_mutex);
+     }
+ 
+     ESP_GOTO_ON_ERROR(sscma_client_write(client, cmd, strlen(cmd)), err, TAG, "write command failed");
+@@ -866,17 +953,26 @@
+     }
+ 
+ err:
+-    if (wait)
+-    {
++    if (wait && request)
++    {
++        xSemaphoreTake(client->request_mutex, portMAX_DELAY);
+         if (listIS_CONTAINED_WITHIN(client->request_list, &(request->item)))
+         {
+             uxListRemove(&(request->item));
+         }
+-        if (request)
+-        {
++        xSemaphoreGive(client->request_mutex);
++        if (request->reply)
++        {
++            // No dispatcher can reference this queue after unlink. A reply may
++            // have arrived just after the wait timed out or the write failed.
++            sscma_client_reply_t pending = {0};
++            while (xQueueReceive(request->reply, &pending, 0) == pdTRUE)
++            {
++                sscma_client_reply_clear(&pending);
++            }
+             vQueueDelete(request->reply);
+-            free(request);
+-        }
++        }
++        free(request);
+     }
+     return ret;
+ }
+@@ -1748,7 +1844,9 @@
+ 
+     sscma_client_break(client);
+ 
++    xSemaphoreTake(client->request_mutex, portMAX_DELAY);
+     vTaskSuspend(client->process_task.handle);
++    xSemaphoreGive(client->request_mutex);
+ 
+     vTaskDelay(100 / portTICK_PERIOD_MS);
+ 
+--- a/managed_components/wvirgil123__sscma_client/include/sscma_client_types.h
++++ b/managed_components/wvirgil123__sscma_client/include/sscma_client_types.h
+@@ -4,6 +4,7 @@
+ 
+ #include "freertos/FreeRTOS.h"
+ #include "freertos/queue.h"
++#include "freertos/semphr.h"
+ #include "freertos/event_groups.h"
+ 
+ #include "cJSON.h"
+@@ -171,6 +172,7 @@
+     } rx_buffer, tx_buffer;    /* !< RX and TX buffer */
+     QueueHandle_t reply_queue; /* !< Queue for reply message */
+     List_t *request_list;      /* !< Request list */
++    SemaphoreHandle_t request_mutex; /* Request list and reply queue lifetime */
+ };
+ 
+ #ifdef __cplusplus
+--- a/managed_components/wvirgil123__sscma_client/include/sscma_client_ops.h
++++ b/managed_components/wvirgil123__sscma_client/include/sscma_client_ops.h
+@@ -55,15 +55,24 @@
+  *          - ESP_OK on success
+  *          - ESP_ERR_INVALID_ARG if parameter is invalid
+  *          - ESP_ERR_NO_MEM if out of memory
++ *          - ESP_ERR_TIMEOUT if failed construction cannot stop remote workers;
++ *            the unpublished client is retained rather than freed unsafely
+  */
+ esp_err_t sscma_client_new(const sscma_client_io_handle_t io, const sscma_client_config_t *config, sscma_client_handle_t *ret_client);
+ 
+ /**
+  * @brief Destroy SCCMA client
+  *
+- * @param[in] client SCCMA client handle
+- * @return
+- *          - ESP_OK on success
++ * Only destroy an uninitialized/stopped client. Stop all external API callers,
++ * callbacks and I/O before calling; prevent concurrent calls/task resumes until
++ * destruction finishes. Runtime-initialized clients are refused.
++ *
++ * @param[in] client SCCMA client handle
++ * @return
++ *          - ESP_OK on success
++ *          - ESP_ERR_INVALID_STATE if initialized or a request is still active
++ *          - ESP_ERR_TIMEOUT if workers cannot suspend within 100ms; the handle
++ *            and all resources remain allocated and may be retried when quiet
+  */
+ esp_err_t sscma_client_del(sscma_client_handle_t client);
+ 

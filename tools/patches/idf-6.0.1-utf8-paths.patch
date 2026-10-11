@@ -1,0 +1,20 @@
+--- a/tools/cmake/toolchain_flags.cmake
++++ b/tools/cmake/toolchain_flags.cmake
+@@ -50,7 +50,7 @@
+         set(file_path "${IDF_TOOLCHAIN_BUILD_DIR}/${file}")
+ 
+         if(EXISTS "${file_path}")
+-            file(STRINGS "${file_path}" existing_lines)
++            file(STRINGS "${file_path}" existing_lines ENCODING UTF-8)
+         else()
+             set(existing_lines "")
+         endif()
+@@ -77,7 +77,7 @@
+         set(file_path "${IDF_TOOLCHAIN_BUILD_DIR}/${file}")
+ 
+         if(EXISTS "${file_path}")
+-            file(STRINGS "${file_path}" existing_lines)
++            file(STRINGS "${file_path}" existing_lines ENCODING UTF-8)
+         else()
+             set(existing_lines "")
+         endif()

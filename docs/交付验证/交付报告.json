@@ -1,0 +1,90 @@
+{
+  "verified_at": "2026-10-11T14:49:01.402906+08:00",
+  "scope": "GitHub teammate handoff; source-only macOS Apple Silicon validation",
+  "hardware_access": false,
+  "remote_created": false,
+  "pushed": false,
+  "software_tests": {
+    "tools": {
+      "passed": 83,
+      "failed": 0
+    },
+    "console": {
+      "passed": 220,
+      "failed": 0
+    },
+    "cpp_host_programs": {
+      "passed": 28,
+      "failed": 0,
+      "not_covered": 0
+    },
+    "release_guards": {
+      "passed": 9,
+      "failed": 0,
+      "skipped": 0
+    },
+    "javascript_suites": {
+      "passed": 3
+    }
+  },
+  "fresh_clone": {
+    "chinese_and_space_path": true,
+    "python_312_environments_created": true,
+    "runtime_and_flash_locks_checked": true,
+    "pip_check": true,
+    "model_download_and_sha256": true,
+    "model_cpu_load": true,
+    "offline_page_and_assets": true,
+    "occupied_port_rejected_without_stopping_other_service": true,
+    "self_venv_rebuild": true,
+    "git_index_preserves_manifest_bytes": true
+  },
+  "build": {
+    "clean": true,
+    "repeat": true,
+    "sdk": "ESP-IDF 6.0.1",
+    "sdk_commit": "8c19b156084a0753687347cca1f5355782893533",
+    "application_bytes": 2879808,
+    "application_sha256": "f0e84ec5bfda61b648caffb294c3acfbff7d96e9d4fbbf3a6c56b628774556dd",
+    "app_address": "0x200000",
+    "partition_bytes": 4194304,
+    "component_patch_first_changed": 3,
+    "component_patch_repeat_changed": 0,
+    "dependencies_lock_unchanged": true,
+    "substituted_for_preserved_v9": false
+  },
+  "release": {
+    "v9_and_v8_bytes_unchanged": true,
+    "private_value_scan_passed": true,
+    "flash_dry_run": true,
+    "rollback_dry_run": true,
+    "archive_sha256": "fa4a3fdb3d3242f622feae7e70b45fb2f55c1f31ce725738e8442a3ccb498373"
+  },
+  "guard_coverage": [
+    "missing configuration",
+    "model checksum and size mismatch",
+    "port occupied and unknown ownership",
+    "wrong serial/device/chip/MAC",
+    "wrong partition and selected OTA slot",
+    "modified application and manifest",
+    "reused PID",
+    "CP1252 loading UTF-8 manifest",
+    "rebuild invoked from own venv",
+    "forced private Git index file",
+    "symlink and export overwrite refusal"
+  ],
+  "windows": {
+    "runtime_and_flash_dependency_resolution": "passed for Windows x64 Python3.12; esptool built as platform-independent wheel",
+    "path_encoding_and_port_unit_tests": "passed",
+    "workflow_prepared": true,
+    "workflow_executed": false,
+    "physical_machine_run": false,
+    "full_idf_build": false
+  },
+  "remaining": [
+    "Run GitHub Windows workflow after upload",
+    "Teammate Windows firmware build/serial flash verification",
+    "Actual camera fps, gesture accuracy, screen/power/servo motion verification"
+  ],
+  "source_policy": "tools/package_team.py; exact per-file digests in source-manifest.json"
+}

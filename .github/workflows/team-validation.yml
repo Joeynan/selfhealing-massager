@@ -1,0 +1,111 @@
+name: Team validation
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-software:
+    name: Windows x64 software checks
+    runs-on: windows-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          architecture: x64
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install pinned runtime, public model and flash tools
+        run: |
+          & .\安装摄像头依赖.ps1 --with-flash
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & .\安装摄像头依赖.ps1 --with-flash --check
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Source allowlist and private-file checks
+        run: |
+          python tools/package_team.py audit
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Python entry, protocol and console regressions
+        run: |
+          & .\work\watcher-control-runtime\venv\Scripts\python.exe -m unittest discover -s tools/tests -v
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & .\work\watcher-control-runtime\venv\Scripts\python.exe tools/run_console_tests.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: CPU model loads without a camera or hardware
+        run: |
+          @'
+          from pathlib import Path
+          import mediapipe as mp
+          model = Path('outputs/Watcher控制台/camera/hand_landmarker.task').resolve()
+          options = mp.tasks.vision.HandLandmarkerOptions(
+              base_options=mp.tasks.BaseOptions(model_asset_path=str(model), delegate=mp.tasks.BaseOptions.Delegate.CPU),
+              running_mode=mp.tasks.vision.RunningMode.LIVE_STREAM,
+              num_hands=2, result_callback=lambda result, image, timestamp: None)
+          with mp.tasks.vision.HandLandmarker.create_from_options(options):
+              print('Pinned CPU hand model loaded; no camera or device was opened.')
+          '@ | & .\work\watcher-control-runtime\venv\Scripts\python.exe -
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: JavaScript parses without npm dependencies
+        run: |
+          node --check "outputs/Watcher控制台/app.js"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check "outputs/Watcher控制台/watcher_ui.js"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Flash and rollback guards use offline fixtures
+        run: |
+          & .\work\watcher-control-runtime\flash-venv\Scripts\python.exe -m unittest discover -s "outputs/Watcher控制台/滚轮表情版/tests" -v
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Offline console serves a real local page
+        run: |
+          @'
+          import json, subprocess, sys, time
+          from pathlib import Path
+          from urllib.request import urlopen
+          import psutil
+          command = [sys.executable, 'outputs/Watcher控制台/launch.py', '--offline', '--no-browser', '--dashboard-port', '8895']
+          log = Path('work/team-ci-offline.log')
+          with log.open('w', encoding='utf-8') as out:
+              process = subprocess.Popen(command, stdout=out, stderr=subprocess.STDOUT)
+              owner = psutil.Process(process.pid)
+              birth = owner.create_time()
+              try:
+                  for attempt in range(100):
+                      if process.poll() is not None:
+                          raise RuntimeError('Offline launcher exited before the page was ready')
+                      try:
+                          with urlopen('http://127.0.0.1:8895/', timeout=1) as response:
+                              assert response.status == 200 and response.read(), 'Empty offline page'
+                          with urlopen('http://127.0.0.1:8895/api/status', timeout=1) as response:
+                              state = json.load(response)
+                          assert state['watcher']['online'] is False
+                          print('Offline console served a page; Watcher is disconnected as expected.')
+                          break
+                      except (OSError, ValueError, AssertionError):
+                          time.sleep(0.1)
+                  else:
+                      raise TimeoutError('Offline page did not become ready')
+              finally:
+                  # Only this job's newly started process tree is closed. Never search by port or process name.
+                  if process.poll() is None and owner.create_time() == birth:
+                      children = owner.children(recursive=True)
+                      for child in children:
+                          try: child.terminate()
+                          except psutil.NoSuchProcess: pass
+                      process.terminate()
+                      psutil.wait_procs(children, timeout=5)
+                      process.wait(timeout=5)
+          '@ | & .\work\watcher-control-runtime\venv\Scripts\python.exe -
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Record remaining hardware and compiler checks
+        run: |
+          "This workflow does not install the complete ESP-IDF SDK, compile firmware, validate Windows C++ host tests, enumerate USB, flash devices, or move servos. Use docs/队友验收清单.md for those checks."
