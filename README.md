@@ -12,6 +12,8 @@ Watcher 摄像头 → Wi-Fi → 电脑提取 21 手节点并识别
 
 小智可以使用电池、不插电脑 USB；**电脑仍须运行识别服务**。当前没有交付可独立运行的板上 21 节点模型。网页不需要 Node.js 或 npm。
 
+私有仓库：[Joeynan/selfhealing-massager](https://github.com/Joeynan/selfhealing-massager)；小智应用与回滚附件：[Watcher v9 Release](https://github.com/Joeynan/selfhealing-massager/releases/tag/watcher-v9-wheel)。队友需先取得仓库访问权限。
+
 ## 从这里开始
 
 1. 阅读 [队友使用指南](docs/队友使用指南.md)，先准备 Python 3.12、可互通的 Wi-Fi 和两块现有设备。
@@ -56,4 +58,4 @@ Watcher 摄像头 → Wi-Fi → 电脑提取 21 手节点并识别
 
 本地后续迭代以 `selfhealing 按摩仪` 为唯一活动工程；原 Documents 项目及旧构建目录仅作备份。不要把已下载的整套本地工程直接 `git add .`。可提交文件由 `tools/package_team.py` 的白名单和检查程序决定，私有 Wi-Fi、设备备份及黑板二进制留在本机。
 
-构建产物不会自动替换已验证 v9 发布镜像。新版本需要新的发布清单与设备验收，原 v9 / v8 附件保持不变。本次队友交付不推送 GitHub、不烧录或测试舵机；已执行与待验证项目见 [交付验证记录](docs/交付验证/交付报告.md)，逐文件校验见导出目录根的 `source-manifest.json`。Windows 和队友设备结果需按清单填写。
+构建产物不会自动替换已验证 v9 发布镜像。新版本需要新的发布清单与设备验收，原 v9 / v8 附件保持不变。当前源码和原样固件附件已上传私有 GitHub；本次上传没有烧录设备或测试舵机。最新发布及 Windows 检查见 [GitHub 发布记录](docs/交付验证/GitHub发布记录.md)；上传前验证见 [交付验证记录](docs/交付验证/交付报告.md)，逐文件校验见导出目录根的 `source-manifest.json`。Windows 和队友设备结果需按清单填写。

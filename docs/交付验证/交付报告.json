@@ -86,5 +86,28 @@
     "Teammate Windows firmware build/serial flash verification",
     "Actual camera fps, gesture accuracy, screen/power/servo motion verification"
   ],
-  "source_policy": "tools/package_team.py; exact per-file digests in source-manifest.json"
+  "source_policy": "tools/package_team.py; exact per-file digests in source-manifest.json",
+  "github_publication": {
+    "published_at": "2026-10-11T15:31:01.051491+08:00",
+    "repository_url": "https://github.com/Joeynan/selfhealing-massager",
+    "private": true,
+    "release_url": "https://github.com/Joeynan/selfhealing-massager/releases/tag/watcher-v9-wheel",
+    "release_asset_sha256": "fa4a3fdb3d3242f622feae7e70b45fb2f55c1f31ce725738e8442a3ccb498373",
+    "download_verified": true,
+    "hardware_access": false,
+    "windows_workflow_url": "https://github.com/Joeynan/selfhealing-massager/actions/workflows/team-validation.yml",
+    "windows_final_recheck": "pending",
+    "local_tools": {
+      "tests": 87,
+      "passed": 85,
+      "skipped": 2,
+      "failed": 0
+    },
+    "local_console": {
+      "tests": 220,
+      "failed": 0,
+      "errors": 0
+    },
+    "firmware_images_changed": false
+  }
 }

@@ -18,20 +18,28 @@
       "sha256": "32f74c8aad962d8f513fd9356396db4f4984f8331ffe56ccae64fee76b740637"
     },
     "README.md": {
-      "bytes": 4495,
-      "sha256": "833b6df6147705a07165420d0f5bcdb7c51cb82ed717620575c0cba4ab01699c"
+      "bytes": 4894,
+      "sha256": "59a62a1d14f9f9a391ea6bb9f605c28b0d2cfdf7c3c78a8e7d2198581d22edf5"
     },
     "docs/GitHub上传指南.md": {
-      "bytes": 4789,
-      "sha256": "a749af3ac9206b7c0a1cd11f02c6d3d06c5639ae1e5d9ea3da47c496fc3f9d89"
+      "bytes": 5015,
+      "sha256": "ce04f59715bfd77e68cc19bed7a6348e12b1f25a20a9acee7f40b04db104db67"
+    },
+    "docs/交付验证/GitHub发布记录.json": {
+      "bytes": 755,
+      "sha256": "57d911325436c731e57ef348a0c8da6d33f2652761475cf53f0547f52cad27d1"
+    },
+    "docs/交付验证/GitHub发布记录.md": {
+      "bytes": 2381,
+      "sha256": "93a258032c2f148528804a0b42dc461b593050e8759958075e6cf182b3209d6d"
     },
     "docs/交付验证/交付报告.json": {
-      "bytes": 2833,
-      "sha256": "840d9ae6447ad1438e8aabcf386593f6520b105e4ad73d61b355f0922a6c4c36"
+      "bytes": 3657,
+      "sha256": "a114cab67a3a875ba1f6342b8facdcde0fd29df1ed0728ffd911bf1e0a8828d0"
     },
     "docs/交付验证/交付报告.md": {
-      "bytes": 3915,
-      "sha256": "035ff0074b14f1a9529be4cc05ed90fdea40c9b8dbdc3c281857c7fd82bb37dc"
+      "bytes": 4091,
+      "sha256": "4ba70843a7c04dcaf233e90d9344005f2c171a65dc3d52f3bef93a7c37fff607"
     },
     "docs/交付验证/源码提交清单.md": {
       "bytes": 1977,
@@ -346,8 +354,8 @@
       "sha256": "ec846c429eefc1faa182c3e45d36f29455b9506c617402ae0fe527e7d4af5a47"
     },
     "outputs/Watcher控制台/install_runtime.py": {
-      "bytes": 6853,
-      "sha256": "d23a1ea1fb52f175afaca9778c2c0880bc95597545c7dcc21652f0c18ec976ec"
+      "bytes": 6877,
+      "sha256": "1da52bb9f25d826e1297a32e2131c5e606562c63a325f32b559f9d7d268cb370"
     },
     "outputs/Watcher控制台/launch.py": {
       "bytes": 14377,
@@ -650,8 +658,8 @@
       "sha256": "07f52312ab6e14f49913f26f5a2d20603efe4aacdd5380d74f6845cafb00f17b"
     },
     "releases/release-index.json": {
-      "bytes": 1225,
-      "sha256": "ecc8866238425700796a9a339b3571c9d5ebf11e695d83d28b9bbce1cfd312f5"
+      "bytes": 1497,
+      "sha256": "8ea20f17dc804ff0bf226c7d4b6cdc29c1456c6b7f3e8aae1aaa1024fa90e1ee"
     },
     "tools/backup_watcher.py": {
       "bytes": 2535,
@@ -726,8 +734,8 @@
       "sha256": "333e08e5f522d2e15ff30be91b8bbb4b2958a4c7100c7004f962ee9b4b5049b2"
     },
     "tools/tests/test_team_runtime.py": {
-      "bytes": 19675,
-      "sha256": "f71ca11ddfd2e4c62cad56afa93426aaa5d5a8c3bea23ef33f61addd3956a6a5"
+      "bytes": 20450,
+      "sha256": "aa09a283aa399eb38ed2f78ba4c0022d607c4d672a944253404f13ffdc7b1365"
     },
     "tools/tests/test_watcher_flash_ports.py": {
       "bytes": 3325,
@@ -7810,8 +7818,8 @@
       "sha256": "a2b8d5f4c729fdf15e5f8366b2027cc9561bfe0f298ac2a5951f603cf1a0ad35"
     }
   },
-  "file_count": 1952,
-  "bytes": 10894190,
+  "file_count": 1954,
+  "bytes": 10900022,
   "issues": [],
   "hardware_access": false
 }

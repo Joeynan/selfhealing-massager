@@ -1,6 +1,6 @@
 # GitHub 上传指南
 
-本次已准备源码与附件，**没有创建远程仓库、提交或推送**。以下操作由维护者在确认提交内容后执行。使用私有仓库，邀请队友；私有仓库也不保存真实 Wi-Fi 密码或设备备份。
+当前源码已上传私有仓库 [Joeynan/selfhealing-massager](https://github.com/Joeynan/selfhealing-massager)，原样 v9 应用与 v8 回滚附件在 [Watcher v9 Release](https://github.com/Joeynan/selfhealing-massager/releases/tag/watcher-v9-wheel)。队友需要仓库访问权限；私有仓库也不保存真实 Wi-Fi 密码或设备备份。以下保留首次上传和后续更新的方法，已有项目更新时使用当前仓库，不重复创建。
 
 ## 1. 先导出待提交源码
 

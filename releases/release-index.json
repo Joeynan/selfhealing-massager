@@ -3,8 +3,8 @@
   "asset": "selfhealing-watcher-v9.zip",
   "asset_bytes": 3530886,
   "asset_sha256": "fa4a3fdb3d3242f622feae7e70b45fb2f55c1f31ce725738e8442a3ccb498373",
-  "download_url": null,
-  "publication_state": "prepared_not_uploaded",
+  "download_url": "https://github.com/Joeynan/selfhealing-massager/releases/download/watcher-v9-wheel/selfhealing-watcher-v9.zip",
+  "publication_state": "published_private",
   "applications": [
     {
       "version": "watcher-servo-controller-v9-wheel",
@@ -29,5 +29,7 @@
     "sha256": "af4241e1f085b337659d8eb5c42f32ebba7e240899fb697bfde02f594e5f4b4a",
     "note": "Existing WE2 Wi-Fi camera firmware; no visual firmware update in this handoff"
   },
-  "hardware_access": false
+  "hardware_access": false,
+  "repository_url": "https://github.com/Joeynan/selfhealing-massager",
+  "release_url": "https://github.com/Joeynan/selfhealing-massager/releases/tag/watcher-v9-wheel"
 }

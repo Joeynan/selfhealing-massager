@@ -114,7 +114,7 @@ def main(argv=None):
     except Exception as exc:
         print('安装未完成：' + str(exc))
         result = 1
-    if sys.stdin.isatty():
+    if sys.stdin.isatty() and sys.stdout.isatty():
         input('按回车关闭窗口。')
     return result
 

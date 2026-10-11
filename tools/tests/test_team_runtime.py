@@ -201,6 +201,16 @@ class TeamInstallerTests(unittest.TestCase):
                 self.assertTrue(any('Python 3.12' in str(call) for call in message.call_args_list))
             self.assertEqual(active.read_bytes(), b'protected running interpreter')
 
+    def test_redirected_installer_output_never_waits_for_close_input(self):
+        module = self.installer()
+        with tempfile.TemporaryDirectory() as folder, patch.object(module, 'WORK', Path(folder)), \
+             patch.object(module, 'base_python', return_value=Path('/python')), \
+             patch.object(module.subprocess, 'run'), patch.object(module.sys.stdin, 'isatty', return_value=True), \
+             patch.object(module.sys.stdout, 'isatty', return_value=False), \
+             patch('builtins.input', side_effect=AssertionError('redirected output must not wait for keyboard input')) as keyboard:
+            self.assertEqual(module.main(['--flash-only']), 0)
+            keyboard.assert_not_called()
+
     def test_flash_only_does_not_load_or_download_camera_model(self):
         module = self.installer()
         with tempfile.TemporaryDirectory() as folder, patch.object(module, 'WORK', Path(folder)), \
@@ -291,7 +301,7 @@ class TeamRebuildIntegrationTests(unittest.TestCase):
             subprocess.run([sys.executable, '-m', 'venv', str(runtime)], check=True, capture_output=True, timeout=90)
             interpreter = runtime/('Scripts/python.exe' if sys.platform == 'win32' else 'bin/python')
             original = subprocess.run([str(interpreter), str(project/'outputs/Watcher控制台/install_runtime.py'),
-                '--flash-only', '--rebuild', '--offline'], capture_output=True, text=True, encoding='utf-8', timeout=90)
+                '--flash-only', '--rebuild', '--offline'], stdin=subprocess.DEVNULL, capture_output=True, text=True, encoding='utf-8', timeout=90)
             if sys.platform == 'win32':
                 self.assertEqual(original.returncode, 1)
                 self.assertIn('Python 3.12', original.stdout)
@@ -299,7 +309,7 @@ class TeamRebuildIntegrationTests(unittest.TestCase):
                 original = subprocess.run([getattr(sys, '_base_executable', sys.executable),
                     str(project/'outputs/Watcher\u63a7\u5236\u53f0/install_runtime.py'),
                     '--flash-only', '--rebuild', '--offline'],
-                    capture_output=True, text=True, encoding='utf-8', timeout=90)
+                    stdin=subprocess.DEVNULL, capture_output=True, text=True, encoding='utf-8', timeout=90)
             self.assertEqual(original.returncode, 0, original.stdout + original.stderr)
             self.assertTrue(interpreter.is_file())
             subprocess.run([str(interpreter), '-c', 'import sys; assert sys.version_info[:2] == (3,12)'],
