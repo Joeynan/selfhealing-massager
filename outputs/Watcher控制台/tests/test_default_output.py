@@ -125,7 +125,7 @@ class DefaultOutputTests(unittest.TestCase):
         dashboard = ready_dashboard('simulation')
         with patch('server.fetch', side_effect=self.responder(dashboard)) as send:
             dashboard.action('/api/source', {'source': 'simulation'})
-            dashboard.observed['watcher']=time.monotonic()
+            dashboard.observed['watcher']=max(time.monotonic(), dashboard.default_enable_after + .001)
             dashboard.watcher['data']['profile_match'] = False
             dashboard.maybe_default_enable()
             self.assertFalse(any(c.args[0].endswith('/servo/arm') and c.args[1].get('enabled')
@@ -225,7 +225,7 @@ class DefaultOutputTests(unittest.TestCase):
         with patch('server.fetch', side_effect=self.responder(dashboard)) as calls:
             dashboard.action('/api/source', {'source': 'simulation'})
             dashboard.watcher['data'].update(client_connected=True, client_connection_id=1)
-            dashboard.observed['watcher']=time.monotonic()
+            dashboard.observed['watcher']=max(time.monotonic(), dashboard.default_enable_after + .001)
             dashboard.maybe_default_enable()
         self.assertTrue(any(c.args[0].endswith('/servo/arm') and c.args[1].get('enabled')
                             for c in calls.call_args_list))
@@ -236,7 +236,7 @@ class DefaultOutputTests(unittest.TestCase):
         with patch('server.fetch', side_effect=self.responder(dashboard)) as calls:
             dashboard.action('/api/source', {'source': 'simulation'})
             dashboard.watcher['data']['client_connection_id'] = 2
-            dashboard.observed['watcher']=time.monotonic()
+            dashboard.observed['watcher']=max(time.monotonic(), dashboard.default_enable_after + .001)
             dashboard.maybe_default_enable()
         self.assertFalse(any(c.args[0].endswith('/servo/arm') and c.args[1].get('enabled')
                              for c in calls.call_args_list))
@@ -246,7 +246,7 @@ class DefaultOutputTests(unittest.TestCase):
         with patch('server.fetch', side_effect=self.responder(dashboard)) as calls:
             dashboard.action('/api/source', {'source': 'simulation'})
             dashboard.watcher['data']['last_stop_reason'] = 'button_stop'
-            dashboard.observed['watcher']=time.monotonic()
+            dashboard.observed['watcher']=max(time.monotonic(), dashboard.default_enable_after + .001)
             dashboard.maybe_default_enable()
         self.assertFalse(any(c.args[0].endswith('/servo/arm') and c.args[1].get('enabled')
                              for c in calls.call_args_list))
@@ -294,6 +294,17 @@ class DefaultOutputTests(unittest.TestCase):
         with patch('server.fetch',side_effect=old_reply):
             self.assertFalse(dashboard.poll('camera','http://camera'))
         self.assertEqual(dashboard.camera['data'],before)
+        self.assertTrue(dashboard.default_enable_pending)
+
+    def test_equal_clock_tick_cannot_arm_from_pre_selection_status(self):
+        # Python 3.12 Windows monotonic ticks can match across source selection.
+        with patch('server.time.monotonic', return_value=1000):
+            dashboard = ready_dashboard('simulation')
+            with patch('server.fetch', side_effect=self.responder(dashboard)) as calls:
+                dashboard.action('/api/source', {'source': 'simulation'})
+                dashboard.maybe_default_enable()
+        self.assertFalse(any(c.args[0].endswith('/servo/arm') and c.args[1].get('enabled')
+                             for c in calls.call_args_list))
         self.assertTrue(dashboard.default_enable_pending)
 
     def test_status_before_source_selection_cannot_arm_from_old_cache(self):

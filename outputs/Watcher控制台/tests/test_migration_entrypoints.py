@@ -33,7 +33,7 @@ class MigrationEntryPointTests(unittest.TestCase):
     def test_runtime_configuration_cannot_escape_runtime_directory(self):
         with tempfile.TemporaryDirectory() as folder, patch.object(launch, 'WORK', Path(folder)):
             (Path(folder) / 'runtime.json').write_text('{"python":"../../old/bin/python"}')
-            self.assertEqual(launch.runtime_candidates(), [Path(folder) / 'venv/bin/python'])
+            self.assertEqual(launch.runtime_candidates(), [launch.venv_python(Path(folder) / 'venv')])
 
     def test_v9_wifi_firmware_is_supported(self):
         self.assertTrue(launch.wifi_firmware_supported('watcher-servo-controller-v9-wheel'))
@@ -170,7 +170,7 @@ class MigrationEntryPointTests(unittest.TestCase):
              patch('subprocess.run') as run, patch('builtins.input'), \
              patch.object(Path, 'mkdir'), patch.object(Path, 'is_dir', return_value=True), \
              patch.object(Path, 'write_text') as write:
-            self.assertEqual(module.main([]), 0)
+            self.assertEqual(module.main(['--wheel-dir', str(ROOT.parents[1]/'work/wheels')]), 0)
         first = run.call_args_list[0].args[0]
         self.assertEqual(first[0], str(ROOT.parents[1]/'work/tools/python-base/bin/python3.12'))
         self.assertEqual(first[-1], str(ROOT.parents[1]/'work/watcher-control-runtime/venv'))
@@ -180,7 +180,7 @@ class MigrationEntryPointTests(unittest.TestCase):
         self.assertEqual(pip.args[0][pip.args[0].index('--find-links') + 1], str(ROOT.parents[1]/'work/wheels'))
         self.assertEqual(pip.kwargs['env']['PIP_CACHE_DIR'], str(ROOT.parents[1]/'work/watcher-control-runtime/cache/pip'))
         configuration = json.loads(write.call_args.args[0])
-        self.assertEqual(configuration['python'], 'venv/bin/python')
+        self.assertEqual(configuration['python'], module.venv_python(module.WORK/'venv').relative_to(module.WORK).as_posix())
 
 
 if __name__ == '__main__':

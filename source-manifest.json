@@ -27,15 +27,15 @@
     },
     "docs/交付验证/GitHub发布记录.json": {
       "bytes": 755,
-      "sha256": "357e6439a5ad978b04ef0df386b6b524f0dda24f97a8f6c0e5f23fe21215ee91"
+      "sha256": "1328830edc0fda092600a805264b4ebe59f5bf56296182aa570ce1eb910fdd7d"
     },
     "docs/交付验证/GitHub发布记录.md": {
-      "bytes": 2405,
-      "sha256": "28dc771b2559c241e57cc32c7bab435baadaa3b4317758b351ff903a9b7dafd3"
+      "bytes": 2453,
+      "sha256": "d27b71f6a82b1e694d86c572d660fca725c206a7f1fd4fa245b3e879fe067e94"
     },
     "docs/交付验证/交付报告.json": {
       "bytes": 3657,
-      "sha256": "16614758af214ab904b3fdf6505d69a460b9a03ac26e03a7b0e8782035e48093"
+      "sha256": "b6a8ec7ab62222a35a7f2a5a82ec462a4d9af498716fe42570a2f748bd954ab7"
     },
     "docs/交付验证/交付报告.md": {
       "bytes": 4091,
@@ -370,8 +370,8 @@
       "sha256": "2da11134f8c846bec4c46090e6588bf52b4b2366b512c494de974b713da92faf"
     },
     "outputs/Watcher控制台/server.py": {
-      "bytes": 40274,
-      "sha256": "abe760dd18cfe18eb859f4842f0028c0051989483c57701dea2da4091c569063"
+      "bytes": 40353,
+      "sha256": "0eb02265de2c65a983541c298812bfc8100f8dd819a75afd6dbe5aa72139c1aa"
     },
     "outputs/Watcher控制台/settings.example.json": {
       "bytes": 86,
@@ -530,8 +530,8 @@
       "sha256": "52e0b1d74e683e8da98aa21a8fa8fd9793fb53265aff1f2d2995db40de560d52"
     },
     "outputs/Watcher控制台/tests/test_default_output.py": {
-      "bytes": 17227,
-      "sha256": "2f73a87660a952bdbbffb47bba4ba87c31abccb11ef97d20b01281683eba05be"
+      "bytes": 18098,
+      "sha256": "9d1b8ba4689fec031b4d688171b9c68c3ca116da084bfaca9b8895522c9970a4"
     },
     "outputs/Watcher控制台/tests/test_gesture_rules.py": {
       "bytes": 9999,
@@ -554,8 +554,8 @@
       "sha256": "d420976b2e5a8747c4b1f4539bd09a0eecb67d38b59dc2129986c15c89b4ece5"
     },
     "outputs/Watcher控制台/tests/test_migration_entrypoints.py": {
-      "bytes": 11666,
-      "sha256": "f0fd487cbfcbca6dce2d5f74930712645fc007ba755dbf3e74162dbf2efc28b9"
+      "bytes": 11781,
+      "sha256": "77557c5441a64980bba34910c7cc12d3b722d2aabff4e655b6239e7a72ddae9f"
     },
     "outputs/Watcher控制台/tests/test_observation_v2.py": {
       "bytes": 11915,
@@ -7823,7 +7823,7 @@
     }
   },
   "file_count": 1955,
-  "bytes": 10901900,
+  "bytes": 10903013,
   "issues": [],
   "hardware_access": false
 }

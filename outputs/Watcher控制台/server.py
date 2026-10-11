@@ -315,8 +315,9 @@ class Dashboard:
             if not self.default_enable_pending or not self.diagnostic_active or self.forward_paused:
                 return
             data=self.watcher['data'] if self.watcher['online'] else {}
-            if self.observed.get('watcher',0)<self.default_enable_after:
-                return  # A response obtained before this source selection is stale.
+            if self.observed.get('watcher',0)<=self.default_enable_after:
+                # Equal Windows clock ticks cannot prove a post-selection reply.
+                return  # Wait for a status strictly newer than source selection.
             if data.get('output_policy_revision') not in ('default-enable-1','continuous-enable-1'):
                 self.output_enable_reason='firmware_update'
                 return
