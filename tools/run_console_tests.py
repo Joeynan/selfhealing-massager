@@ -14,8 +14,12 @@ def main():
             raise AssertionError('Only loopback tests allowed: '+repr(address))
     def connect(sock,address):check(address);return original_connect(sock,address)
     def bind(sock,address):check(address);return original_bind(sock,address)
-    def forbid_child_process(*args,**kwargs):raise AssertionError('All test child processes must be mocked')
-    socket.socket.connect=connect;socket.socket.bind=bind;subprocess.Popen=forbid_child_process
+    # Windows asyncio lazily subclasses Popen during test discovery. Keep a
+    # class here while still rejecting every unmocked child-process launch.
+    class ForbiddenPopen(subprocess.Popen):
+        def __init__(self,*args,**kwargs):
+            raise AssertionError('All test child processes must be mocked')
+    socket.socket.connect=connect;socket.socket.bind=bind;subprocess.Popen=ForbiddenPopen
     suite=unittest.defaultTestLoader.discover('tests',pattern='test_*.py')
     result=unittest.TextTestRunner(verbosity=1).run(suite)
     report={'verified_at':datetime.datetime.now().astimezone().isoformat(),'tests':result.testsRun,
