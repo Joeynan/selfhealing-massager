@@ -39,7 +39,7 @@ def prepare_venv(runtime, rebuild=False):
 
 def check_environment(python, requirements, environment):
     script = ('from importlib.metadata import version; from pathlib import Path; import sys; '
-              'items=[x.strip() for x in Path(sys.argv[1]).read_text().splitlines() if x.strip() and not x.startswith("#")]; '
+              'items=[x.strip() for x in Path(sys.argv[1]).read_text(encoding="utf-8").splitlines() if x.strip() and not x.startswith("#")]; '
               'bad=[x for x in items if version(x.split("==")[0]) != x.split("==")[1]]; '
               'raise SystemExit("依赖版本不一致: "+", ".join(bad) if bad else 0)')
     subprocess.run([str(python), '-I', '-c', script, str(requirements)], check=True,
@@ -57,7 +57,10 @@ def main(argv=None):
             environment.pop(variable, None)
         environment.update(PIP_CACHE_DIR=str(WORK / 'cache/pip'), PIP_DISABLE_PIP_VERSION_CHECK='1', PYTHONUTF8='1')
         if options.rebuild and python_inside(sys.executable, rebuild_targets):
-            # Release a venv interpreter before deleting it (Windows locks its EXE).
+            if sys.platform == 'win32':
+                # Windows exec keeps its parent EXE locked; stop before any deletion.
+                raise RuntimeError('Windows 请关闭当前虚拟环境，用系统 Python 3.12 或工程根目录的重建运行环境.ps1 重建。')
+            # POSIX replaces the running interpreter before deleting its old venv.
             arguments = list(sys.argv[1:] if argv is None else argv)
             os.execve(str(python), [str(python), str(Path(__file__).resolve())] + arguments, environment)
         installations = [] if options.flash_only else [('venv', ROOT/'requirements-runtime.lock')]

@@ -6,8 +6,8 @@
       "sha256": "94967f0cea90ded548b22ea18de51bf25ad69170d947224f0d0eafe937264f18"
     },
     ".github/workflows/team-validation.yml": {
-      "bytes": 5495,
-      "sha256": "34d4bc6d4dc95e5357af5c3ac04b289be15e882b9ef9c4e285f5ceb937522ecb"
+      "bytes": 5526,
+      "sha256": "a3d5767b6318dbf273b8e84245e36ef01db4af14ace9a95c653976f4793b108f"
     },
     ".gitignore": {
       "bytes": 2276,
@@ -42,8 +42,8 @@
       "sha256": "19df5cce481612283d6b61d5c1248da9a0c2263b6516528099e9e6a1eb82735a"
     },
     "docs/队友使用指南.md": {
-      "bytes": 21121,
-      "sha256": "e224aafa5eea8f14514b3207c7fcbdb0462cffe7142078532d9df7162e9a8b95"
+      "bytes": 21347,
+      "sha256": "97d6dc36ee28fc6df8cfad9216da4d3476d5dda242ff2aea69996a982149baa9"
     },
     "docs/队友验收清单.md": {
       "bytes": 4043,
@@ -346,8 +346,8 @@
       "sha256": "ec846c429eefc1faa182c3e45d36f29455b9506c617402ae0fe527e7d4af5a47"
     },
     "outputs/Watcher控制台/install_runtime.py": {
-      "bytes": 6561,
-      "sha256": "329e5ee3c693de37192710260e8b144329eb15c8bc7429d58ffc790dad12bda9"
+      "bytes": 6853,
+      "sha256": "d23a1ea1fb52f175afaca9778c2c0880bc95597545c7dcc21652f0c18ec976ec"
     },
     "outputs/Watcher控制台/launch.py": {
       "bytes": 14377,
@@ -694,8 +694,8 @@
       "sha256": "3d44dec56ee15b04416e007269d3eb5f3c9a0960ad1168c73107eba97aeac847"
     },
     "tools/runtime_entry.py": {
-      "bytes": 1341,
-      "sha256": "e3135c0bf8968dcdf0161ff967c774dc4de6255f09649d4822e4912971f88268"
+      "bytes": 1694,
+      "sha256": "1e88e9d4ecf33378649067cbc3ef9a993bdd01a9d93f2778ff751692edec6e9c"
     },
     "tools/runtime_support.py": {
       "bytes": 7262,
@@ -726,8 +726,8 @@
       "sha256": "333e08e5f522d2e15ff30be91b8bbb4b2958a4c7100c7004f962ee9b4b5049b2"
     },
     "tools/tests/test_team_runtime.py": {
-      "bytes": 16331,
-      "sha256": "5803122f6d7474160eeb5ba36ba3dd74c211104becae534743b2de9fb63b7736"
+      "bytes": 19025,
+      "sha256": "db4dd08ffb51f0476f2bcb2263b8325346b934ef470b2b16a469ad79dfb15a87"
     },
     "tools/tests/test_watcher_flash_ports.py": {
       "bytes": 3325,
@@ -7811,7 +7811,7 @@
     }
   },
   "file_count": 1952,
-  "bytes": 10889687,
+  "bytes": 10893283,
   "issues": [],
   "hardware_access": false
 }

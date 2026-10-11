@@ -3,7 +3,7 @@
 from pathlib import Path
 import os
 import sys
-from runtime_support import base_python, venv_python
+from runtime_support import base_python, python_inside, venv_python
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -25,6 +25,9 @@ def main(argv=None):
         script = ROOT/'outputs/Watcher控制台/launch.py'
         arguments = start_arguments(arguments)
     else:
+        if '--rebuild' in arguments and sys.platform == 'win32' and python_inside(
+                sys.executable, (ROOT/'work/watcher-control-runtime/venv', ROOT/'work/watcher-control-runtime/flash-venv')):
+            raise SystemExit('Windows rebuild: close this venv and use system Python 3.12 or the root PowerShell rebuild entry.')
         python = base_python(ROOT)
         script = ROOT/'outputs/Watcher控制台/install_runtime.py'
     for name in ('PYTHONHOME', 'PYTHONPATH'):
