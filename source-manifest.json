@@ -6,8 +6,8 @@
       "sha256": "94967f0cea90ded548b22ea18de51bf25ad69170d947224f0d0eafe937264f18"
     },
     ".github/workflows/team-validation.yml": {
-      "bytes": 5592,
-      "sha256": "6f31a99f8c570eaa30ce65607d3847257fa30a9164e8687a90f5500a6d8025dc"
+      "bytes": 5612,
+      "sha256": "a17f1016ccad261f5cb608b3f663d61283675df624e54dedfbfa5313f495f00f"
     },
     ".gitignore": {
       "bytes": 2262,
@@ -42,8 +42,8 @@
       "sha256": "060fc0b66b71b0a8048689e77f5138c93858cae4bee96cb6ab426bce9a1129f9"
     },
     "docs/交付验证/使用指南更新记录.md": {
-      "bytes": 4633,
-      "sha256": "fc1243cbc04d4055b2a5300564c2b666e621d1fd9041ab3e767df376b519b3c6"
+      "bytes": 5408,
+      "sha256": "fe493460e37134a3aaaf3bbc0acc86614a21731306ceb44883a3d204027669b5"
     },
     "docs/交付验证/源码提交清单.md": {
       "bytes": 2052,
@@ -7871,7 +7871,7 @@
     }
   },
   "file_count": 1967,
-  "bytes": 11003334,
+  "bytes": 11004129,
   "issues": [],
   "hardware_access": false
 }

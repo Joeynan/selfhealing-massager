@@ -114,4 +114,4 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Record remaining hardware and compiler checks
         run: |
-          "This workflow does not install the complete ESP-IDF SDK, compile firmware, validate Windows C++ host tests, enumerate USB, flash devices, or move servos. Use docs/验收清单.md for those checks."
+          "This workflow does not install the complete ESP-IDF SDK, compile firmware, run the full 28-case firmware host regression suite, enumerate USB, flash devices, or move servos. Use docs/验收清单.md for those checks."
