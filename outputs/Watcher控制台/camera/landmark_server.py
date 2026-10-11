@@ -1,3 +1,5 @@
+# 电脑识别服务入口：从 Watcher 获取图像，调用 MediaPipe 提取 21 节点，再交给手势规则。
+# 本文件运行在电脑上；设备采集、显示和舵机接收分别由两块板的固件负责。
 """Local Watcher camera + MediaPipe Tasks service. No motor communication."""
 import argparse
 from dataclasses import asdict
@@ -70,6 +72,7 @@ class App:
             self.pipeline.reset()
             self.save_trials()
 
+    # 固定模型由安装器下载并校验；使用内存中的模型字节，兼容中文与空格路径。
     def initialize_model(self, model_path):
         import hashlib
         import mediapipe as mp
@@ -87,6 +90,7 @@ class App:
             result_callback=self.on_result)
         self.model=mp.tasks.vision.HandLandmarker.create_from_options(options)
 
+    # 异步结果只能对应原提交帧；旧采集会话或重置前的回调不会发布新的有效确认。
     def on_result(self,result,image,timestamp_ms):
         try:
             # The frame and RGB owner remain alive until this exact callback.
@@ -116,6 +120,7 @@ class App:
         except Exception as e:
             self.pipeline.fail_inference('手节点结果处理失败：'+str(e))
 
+    # 一次处理最新一帧，避免排队图像让识别结果越来越旧。
     def inference_worker(self):
         import cv2
         import numpy as np
@@ -154,6 +159,7 @@ class App:
                 self.pipeline.error('摄像头连接异常：'+str(e))
                 self.stopping.wait(3)
 
+    # Wi-Fi 画面传入同一识别流水线；摄像头故障通过状态发布，不使用旧帧续期。
     def wifi_camera_worker(self):
         while not self.stopping.is_set():
             with self.pipeline.lock:

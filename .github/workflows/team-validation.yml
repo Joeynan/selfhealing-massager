@@ -1,4 +1,4 @@
-name: Team validation
+name: Software validation
 
 on:
   push:
@@ -114,4 +114,4 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Record remaining hardware and compiler checks
         run: |
-          "This workflow does not install the complete ESP-IDF SDK, compile firmware, validate Windows C++ host tests, enumerate USB, flash devices, or move servos. Use docs/队友验收清单.md for those checks."
+          "This workflow does not install the complete ESP-IDF SDK, compile firmware, validate Windows C++ host tests, enumerate USB, flash devices, or move servos. Use docs/验收清单.md for those checks."

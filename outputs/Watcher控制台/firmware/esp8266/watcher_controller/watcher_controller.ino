@@ -1,3 +1,5 @@
+// 黑色 ESP-12F / NodeMCU 固件入口；用 Arduino IDE 编译本目录，保留所有配套头文件。
+// Wi-Fi 名称和密码只在私有 wifi_settings.h 填写；目标小智由发现/配对信息确定。
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
 #include <ESP8266WebServer.h>
@@ -24,6 +26,8 @@ ServoProfile profile;
 NodeIdentityGate identity;
 StopLineParser parser;
 constexpr uint16_t kControllerPort = 8888;
+// 通道顺序固定：捶打 D1(GPIO5)、揉搓 D2(GPIO4)、轻捏 D3(GPIO0)。
+// Servo 按 50Hz 输出；当前默认运行 2000µs、中立 1500µs，由配置与校准状态提供。
 const uint8_t pins[3] = {D1, D2, D3};
 static_assert(D1 == 5 && D2 == 4 && D3 == 0, "NodeMCU pin map required");
 static_assert(sizeof(NodeStoredRecord) <= 512, "EEPROM record exceeds reserved area");
@@ -65,6 +69,7 @@ void event(uint8_t reason) {
   history[historyCount++] = record;
   if (client.connected() && identity.Verified()) sendLine(line);
 }
+// 切换前先让所有通道回中立，再设置选中一路；日志记录提交值，不推断机械转动。
 bool writeOutputs(uint8_t reason) {
   bool changed = writtenMode != output.Mode() || writtenMask != attachedMask();
   for (int index = 0; index < 3; ++index) changed = changed || written[index] != output.Pulse(index);
@@ -78,6 +83,7 @@ bool writeOutputs(uint8_t reason) {
   for (int index = 0; index < 3; ++index) written[index] = output.Pulse(index);
   event(reason); return true;
 }
+// 禁用先短暂输出中立再解除信号，区别于只把运行通道设置为 1500µs。
 void disarm(uint8_t reason) {
   output.Enable(false);
   if (attachedMask()) {
@@ -112,6 +118,7 @@ bool saveSettings() {
   if (!persistenceHealthy) { Serial.println("PERSIST_FAILED outputs_disabled=1"); return false; }
   stored = replacement; return true;
 }
+// EEPROM 只保存校准、配对及本地配置身份；重新启动不会继承上一次已启用会话。
 void loadSettings() {
   EEPROM.begin(512); EEPROM.get(0, stored);
   bool migrated = false;
@@ -189,6 +196,7 @@ void ack(const char* prefix, uint32_t sequence) {
   char line[96]; snprintf(line, sizeof(line), "%s %lu %u %u %u %u %lu\n", prefix, (unsigned long)sequence,
     output.Mode(), output.Pulse(0), output.Pulse(1), output.Pulse(2), (unsigned long)millis()); sendLine(line);
 }
+// 先恢复配置并保持输出禁用，再连接 Wi-Fi；身份与 PROFILE/ARM 握手后才输出信号。
 void setup() {
   Serial.begin(115200); Serial.println("\nWATCHER_SERVO_CONTROLLER_V7 outputs_disabled_at_boot firmware=esp8266-servo-controller-v7 hold_protocol=2");
   Serial.println("NODE_PIN_MAP D1=GPIO5 D2=GPIO4 D3=GPIO0");
@@ -202,6 +210,7 @@ void setup() {
   WiFi.persistent(false); WiFi.mode(WIFI_STA); WiFi.hostname(nodeHostname); WiFi.setAutoReconnect(true);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD); nextWifiRetry = millis() + 30000;
 }
+// 持续处理网络和 SET2 截止时间；断线、租约过期和停止均结束当前动作。
 void loop() {
   uint32_t now = millis(); if (output.Tick(now)) writeOutputs(3);
   if (sendFailed) { disconnectController(); return; }

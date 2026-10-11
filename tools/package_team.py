@@ -14,7 +14,7 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[1]
 CONSOLE = 'outputs/Watcher控制台'
 ROOT_FILES = {'README.md', 'AGENTS.md', '.gitignore', '.gitattributes', 'source-manifest.json'}
-DOC_FILES = {'队友使用指南.md', 'GitHub上传指南.md', '第三方来源与许可.md', '队友验收清单.md'}
+DOC_FILES = {'使用指南.md', 'GitHub上传指南.md', '第三方来源与许可.md', '验收清单.md'}
 LOCAL_TOOLS = {'verify_project.py', 'setup_environments.py', 'install_arduino_tools.py', 'restore_vision_tools.py'}
 PRESERVED_APPS = {
     '': ('watcher-controller-v9-wheel-face.bin', 2879808, 'fb4fe0e39777e3e5d0594b7662ad559fc3a42af490dd71064be9d42bea4cbece'),

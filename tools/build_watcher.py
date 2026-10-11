@@ -4,6 +4,7 @@ from pathlib import Path
 import argparse, hashlib, json, os, shutil, struct, subprocess, sys
 sys.path.insert(0,str(Path(__file__).resolve().parent))
 from watcher_build_support import apply_managed_patches, apply_sdk_path_patch, digest, metadata, validate_sdk
+from watcher_wifi_config import validate_source_wifi_config
 
 ROOT = Path(__file__).resolve().parent.parent
 PROJECT = ROOT / 'work/xiaozhi-esp32'
@@ -11,6 +12,21 @@ SDK = ROOT / 'work/esp-idf'
 TOOLS = ROOT / 'work/idf-tools'
 CONFIG_TEMPLATE = ROOT / 'tools/config/watcher-wheel-v9.sdkconfig'
 CONFIG_TEMPLATE_SHA = '18193edabd61d6135e729872840903d666fa8b57677583e6a09c952efe0abf63'
+
+def report_application_path(image, root=ROOT):
+    # 构建报告跨平台共用 POSIX 相对路径，避免 Windows 分隔符阻断离线校验。
+    return image.relative_to(root).as_posix()
+
+def invalidate_source_wifi_object(build):
+    # __has_include 无法把尚不存在的私有头加入旧 depfile。
+    # 只失效本板配网模块的生成对象，让新增／移除头文件也会重新编译；不写源码或凭据缓存。
+    relative = Path('esp-idf/main/CMakeFiles/__idf_main.dir/boards/sensecap-watcher-gesture/source_wifi_config.cc.obj')
+    current = Path(build)
+    if current.is_symlink():raise ValueError('Refusing a symlinked source Wi-Fi build cache')
+    for part in relative.parts:
+        current = current / part
+        if current.is_symlink():raise ValueError('Refusing a symlinked source Wi-Fi build object')
+    current.unlink(missing_ok=True)
 
 def locked_template(path=CONFIG_TEMPLATE):
     data=path.read_bytes()
@@ -88,6 +104,8 @@ def main():
     parser.add_argument('--jobs', type=int, default=6)
     parser.add_argument('--idf-path',type=Path,help='Activated official ESP-IDF 6.0.1 checkout; its exact commit is checked')
     args = parser.parse_args()
+    # 配网错误先行拒绝，不输出凭据，也不改变 SDK 或构建缓存。
+    validate_source_wifi_config(PROJECT)
     build = PROJECT / 'build'
     defaults = build / 'xiaozhi-build.sdkconfig.defaults'
     runtime=select_build_runtime(sdk_override=args.idf_path)
@@ -124,12 +142,13 @@ def main():
     if digest(lock.read_bytes())!=baseline['dependencies_lock_sha256']:raise ValueError('Component manager changed fixed dependencies.lock; stopped before application build')
     patch_report=apply_managed_patches(PROJECT,ROOT)
     verified_config=validate_config(config_path,appended)
+    if not args.configure_only:invalidate_source_wifi_object(build)
     for cmd in commands[1:]:subprocess.run(cmd,cwd=PROJECT,env=environment,check=True)
     if not args.configure_only:
         image=build/'xiaozhi.bin'; data=image.read_bytes()
         if not (data[0]==0xe9 and int.from_bytes(data[12:14],'little')==9 and len(data)<=0x400000):
             raise ValueError('Invalid ESP32-S3 application or application partition overflow')
-        report={'build_verified':True,'application':str(image.relative_to(ROOT)),
+        report={'build_verified':True,'application':report_application_path(image),
                 'bytes':len(data),'sha256':hashlib.sha256(data).hexdigest(),
                 'chip':'esp32s3','application_address':'0x200000','hardware_access':False,
                 'configuration':verified_config,'configuration_template_sha256':CONFIG_TEMPLATE_SHA,

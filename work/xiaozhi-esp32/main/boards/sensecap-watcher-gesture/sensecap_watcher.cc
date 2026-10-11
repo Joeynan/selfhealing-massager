@@ -1,3 +1,5 @@
+// Watcher 专用板型入口：初始化硬件、整屏表情、滚轮两页、长按电源和摄像头。
+// 显示读取状态快照；页面切换不会改变手势来源、动作期限或舵机映射。
 #include <esp_timer.h>
 #include <ssid_manager.h>
 #include <atomic>
@@ -22,6 +24,7 @@ LV_FONT_DECLARE(watcher_ui_font_20);
 #include "power_save_timer.h"
 #include "sensecap_audio_codec.h"
 #include "sscma_camera.h"
+#include "source_wifi_config.h"
 #include "wifi_board.h"
 
 #include <driver/i2c_master.h>
@@ -412,6 +415,7 @@ private:
         GestureService::Instance().RotatePage(clockwise, IoExpanderGetLevel(BSP_KNOB_BTN) == 0);
     }
 
+    // 一个方向进入数据页，反方向返回表情页；按住电源或待机时忽略滚轮。
     void InitializeKnob() {
         knob_ = std::make_unique<Knob>(BSP_KNOB_A_PIN, BSP_KNOB_B_PIN);
         knob_->OnRotate([this](bool clockwise) {
@@ -465,6 +469,7 @@ private:
             GestureService::Instance().PowerState() == GesturePowerState::Active)
             GestureService::Instance().BeginPowerStop();
     }
+    // 运行中长按满 3 秒先禁止新动作，松手执行关机/待机；短按与开机松手保护见 ButtonPolicy。
     void InitializeButton() {
         instance_ = this;
         button_policy_.Boot(IoExpanderGetLevel(BSP_KNOB_BTN) == 0);
@@ -828,6 +833,8 @@ private:
 
 public:
     SensecapWatcher() {
+        // 在网络管理器首次读 NVS 前导入可选源码配置；相同配置不会覆盖串口配网。
+        watcher_source_wifi::ApplyCompiled();
         ESP_LOGI(TAG, "Initialize Sensecap Watcher");
         InitializePowerSaveTimer();
         InitializeI2c();

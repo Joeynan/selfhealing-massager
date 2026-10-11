@@ -1,3 +1,5 @@
+// 两板共用文本协议：SET2 包含命令序号、模式、最长 600ms 租约及黑板截止时间。
+// 迟到或重复指令不能获得新的完整租约；APPLIED 记录软件提交值，TEST 最长 500ms。
 #pragma once
 #include <cstdint>
 #include <cstring>

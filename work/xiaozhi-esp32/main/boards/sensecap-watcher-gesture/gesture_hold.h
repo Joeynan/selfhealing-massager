@@ -1,3 +1,5 @@
+// 表情与动作保持状态：新有效确认启动/刷新 5 秒，另一手势立即切换。
+// 无手超过 800ms 停止动作；表情可保留至 5 秒，短通信租约仍单独检查。
 #pragma once
 #include <algorithm>
 #include <cstdint>
@@ -92,6 +94,7 @@ public:
     uint8_t Face(uint32_t now) const { return Until(deadline_, now) ? face_ : 0; }
     uint8_t Motion(uint32_t now) { Tick(now); return motion_; }
     uint32_t FaceRemaining(uint32_t now) const { return Face(now) ? Until(deadline_, now) : 0; }
+    // 可转发时间取所有剩余期限的最小值；普通未识别不能把 5 秒重新计满。
     uint32_t MotionRemaining(uint32_t now, uint32_t camera_captured) {
         if (!Motion(now) || now - camera_captured >= 800) return 0;
         return std::min({Until(deadline_, now), 800u - (now - observed_),

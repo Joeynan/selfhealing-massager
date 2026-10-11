@@ -1,3 +1,5 @@
+# 电脑到 Watcher 的转发层：发送最新有效观察，而不是直接向黑板发送舵机指令。
+# 5 秒保持由 Watcher 管理；转发旧结果不能刷新动作或采集有效期限。
 """Bounded gesture intent. Camera duplicates never extend a command lease."""
 import math
 import re
@@ -78,6 +80,7 @@ class IntentEngine:
                 camera.get('camera_session_id') is None and camera.get('camera_frame_id') is None and
                 not camera.get('error') and now<self.publication_wait_until)
 
+    # 确认、无手、未识别、冲突、错误分开发送；只有新的会话/帧证明可更新设备状态。
     def _observation_step(self, camera, now):
         instance=camera.get('recognition_instance_id')
         if self.recognition_instance_id is not None and instance!=self.recognition_instance_id:

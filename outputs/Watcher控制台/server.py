@@ -1,3 +1,5 @@
+# 网页控制台后端：汇总两板状态，提供来源选择、模拟短测、校准和可导出日志。
+# 识别转发与设备轮询分开运行；网页显示的脉宽和回执不等同于实物运动测量。
 """Local control dashboard. Watcher owns the TCP link to the ESP8266."""
 import argparse
 import copy
@@ -301,6 +303,7 @@ class Dashboard:
         self.log('recognition_restart','识别服务已重启，动作已取消；'+(recovery if not self.forward_paused else '转发暂停，等待停止及确认重置成功'),
                  self.forward_paused,{'previous_instance':previous,'recognition_instance':identity,'preview_resumed':not self.forward_paused})
 
+    # 保留默认启用偏好，但必须等两板身份、配置和控制会话就绪后才能提交启用。
     def maybe_default_enable(self):
         # New firmware owns continuous permission and readiness. Observing it
         # never manufactures a device receipt or sends repeated ARM commands.
@@ -516,6 +519,7 @@ class Dashboard:
             self.changed('expression', d.get('emotion'), '小智表情：' + str(d.get('emotion', '未知')))
         return True
 
+    # 只转发最新识别输入；停止、服务异常和来源切换仍由期限与确认屏障约束。
     def forward_inputs(self, now):
         if not self.diagnostic_active or self.forward_paused:
             return

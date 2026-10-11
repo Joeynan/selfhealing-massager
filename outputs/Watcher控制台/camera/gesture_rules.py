@@ -1,3 +1,5 @@
+# 手势规则层：只分析模型已给出的节点，不采集摄像头、不直接驱动舵机。
+# 阈值保存在 Config；距离除以掌长，减小摄像距离变化对判断的影响。
 """Deterministic landmark rules. No camera, ML runtime, or actuator dependencies."""
 from dataclasses import asdict, dataclass, field
 import math
@@ -81,6 +83,7 @@ def valid_points(points):
                 all(isinstance(v, (int,float)) and not isinstance(v,bool) and math.isfinite(v) for v in p) for p in points))
 
 
+# 先验证 21 节点，再还原图像尺度；指尖距离、弯曲角度和掌面法向用于不同手势规则。
 def features(observation, width, height, config):
     landmarks = observation.get('landmarks')
     if not valid_points(landmarks):
@@ -114,6 +117,7 @@ def features(observation, width, height, config):
             'normal_z':normal_z}
 
 
+# 每只手单独保存开合阶段与确认帧，避免把两只手或两次入镜的动作拼成揉搓周期。
 class HandState:
     def __init__(self):
         self.pinching = False
@@ -132,12 +136,14 @@ class HandState:
         self.open_lengths = None
 
     def classify(self, f, side, t, c):
+        # 轻捏：拇指与食指靠近，且其他手指有足够展开；进入/退出阈值不同，减少抖动。
         threshold = c.pinch_exit if self.pinching else c.pinch_enter
         self.pinching = (f['pinch_ratio'] < threshold and
                         sum(extended and ratio >= c.pinch_spread_min
                             for extended,ratio in zip(f['extended'][1:],f['tip_thumb_ratios'][1:])) >= 2)
         sign = c.back_sign_by_hand.get(side,0)
         back = bool(sign) and f['normal_z']*sign >= c.back_normal_min
+        # 捶打保留手背校准；四指握拳且拇指微开，不能仅凭指尖接近来认定。
         pound_threshold = c.pound_thumb_hold if self.pounding else c.pound_thumb_enter
         pounding = (back and all(f['folded']) and
                     c.thumb_open_min <= f['thumb_open_ratio'] <= min(c.thumb_open_max, pound_threshold) and
@@ -152,9 +158,11 @@ class HandState:
         curled = (lengths is not None and sum(r <= c.knead_curl_tip_max for r in lengths) >= 3
                   and sum(f['folded']) >= 2 and not any(f['extended'])
                   and f.get('tip_cluster_ratio', float('inf')) <= c.knead_curl_spread_max)
+        # 静态揉搓：四指收拢且拇指明显伸出，不限定掌面朝向；与捶打拇指阈值分离。
         static_threshold = c.knead_static_thumb_hold if self.static_kneading else c.knead_static_thumb_enter
         self.static_kneading = (curled and f['thumb_open_ratio'] >= static_threshold and
                                 f['thumb_length_ratio'] <= c.knead_static_thumb_length_max)
+        # 动态揉搓必须有新完成的开合周期；静止收拢和旧周期不会产生新的动作确认。
         completed_this_frame = False
         completed_cycle_start = None
         closed = gathered or curled
@@ -245,6 +253,7 @@ class GestureEngine:
         self.candidate_ids=set();self.stable_ids=set()
         self._observation(observation_state,hand_present=hand_present)
 
+    # 一帧只接受一次；静态确认需至少三个不同帧和 300ms，冲突或异常不启动动作。
     def process(self, frame_id, timestamp_ms, hands, now_ms, width=640, height=480):
         self.snapshot(now_ms)
         if now_ms < timestamp_ms or now_ms-timestamp_ms >= self.config.lost_ms:

@@ -1,3 +1,5 @@
+# 识别流水线共享状态：一个最新采集槽、一个推理槽和一次完整结果发布。
+# 采集/识别/网页线程通过锁交换状态，现场测试记录与软件确认结果分别保存。
 """One capture slot, one inference slot, an atomic result, and trial evidence."""
 from collections import deque
 from dataclasses import asdict, dataclass
@@ -64,6 +66,7 @@ class TrialRecorder:
         return result
 
 
+# 按左右手与掌心位置延续手的身份；离开画面后不沿用旧手的揉搓历史。
 class HandTracker:
     def __init__(self):
         self.previous={};self.counter=0
@@ -186,6 +189,7 @@ class FramePipeline:
             self.tracker=HandTracker();self.published=None
             self.generation+=1
 
+    # 启用输出或切换来源时建立新确认代际，禁止缓存中的旧确认重新启动舵机。
     def reset_confirmation(self, now_ms):
         with self.lock:
             self.reset()

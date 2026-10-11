@@ -1,3 +1,5 @@
+// Watcher 控制中心：接收电脑观察，维护表情/动作保持状态，再向黑板转发 SET2。
+// 黑板的短租约受动作、观察、摄像头剩余时间限制；回执只证明软件接受/提交。
 #include "gesture_service.h"
 #include <esp_mac.h>
 #include <esp_netif.h>
@@ -389,6 +391,7 @@ void GestureService::CameraFault(const char* reason) {
     StopLocked(reason, true);
     hold_.Reset(); camera_observation_version_ = 0;
 }
+// 统一处理时效与自动启用：新手势可立即切换，失联/异常取消动作，旧确认不能重放。
 void GestureService::RulesLoop() {
 #ifdef GESTURE_MDNS_AVAILABLE
     std::string advertised_model;
@@ -755,6 +758,7 @@ std::string GestureService::Status() {
     cJSON_Delete(o);
     return body;
 }
+// 黑板 TCP 会话先验证身份、同步三路配置和中立状态，再允许启用和带截止时间的指令。
 void GestureService::Serve() {
     Network();
     esp_wifi_set_ps(WIFI_PS_NONE);
@@ -1027,6 +1031,7 @@ void GestureService::Serve() {
     }
 }
 // Dedicated listener: large camera replies never occupy the control listener/task.
+// 画面接口携带设备 ID、会话与帧年龄；绿色实体灯由新鲜画面活动决定。
 void GestureService::CameraHttpServe() {
     Network();
     int listener = -1;
@@ -1370,6 +1375,7 @@ void GestureService::HttpServe() {
         close(fd);
     }
 }
+// 独立显示任务读取快照，避免动画/电量读取阻塞控制锁和舵机指令转发。
 void GestureService::DisplayLoop() {
     vTaskDelay(pdMS_TO_TICKS(2500));
     while (true) {

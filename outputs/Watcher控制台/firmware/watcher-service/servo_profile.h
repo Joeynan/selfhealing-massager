@@ -1,3 +1,5 @@
+// 三路配置按捶打/揉搓/轻捏排序；版本迁移只替换旧默认值，保留主动保存的校准。
+// PROFILE ID 由中立和运行脉宽计算，两板一致后才启用。
 #pragma once
 #include <cstdint>
 constexpr uint16_t kNeutralUs[3] = {1500, 1500, 1500};

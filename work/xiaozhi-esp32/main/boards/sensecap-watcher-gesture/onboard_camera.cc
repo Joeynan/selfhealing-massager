@@ -1,3 +1,5 @@
+// 摄像头采集适配层：通过内部 SPI 请求视觉芯片的预装采集固件，发布 JPEG。
+// 当前识别模型仍运行在电脑；此文件不在 Watcher 上提取 21 节点。
 #include "onboard_camera.h"
 #include <esp_log.h>
 #include <esp_random.h>
@@ -49,6 +51,7 @@ void OnboardCamera::Receive(const sscma_client_reply_t* reply) {
     }
     GestureService::Instance().SubmitLandmarks(frame);
 }
+// 新采集会话废弃旧帧证明；恢复后必须产生新的有效图像，不能沿用待机前缓存。
 bool OnboardCamera::StartSession() {
     session_ = esp_random();
     if (!session_)

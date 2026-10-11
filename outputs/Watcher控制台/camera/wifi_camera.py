@@ -1,3 +1,5 @@
+# Watcher Wi-Fi 图像接收：校验设备身份、JPEG 完整性、采集会话、帧号和画面年龄。
+# 两台设备时钟不同，因此用本机请求时间扣除设备帧年龄，不直接比较绝对时间。
 """Bounded Wi-Fi snapshots. Device clocks are never compared with Mac clocks."""
 from collections import deque
 from dataclasses import dataclass
@@ -41,6 +43,7 @@ class WiFiFrameReader:
         if not low<=value<=high:raise ValueError('画面元数据超出范围：'+key)
         return value
 
+    # 拒绝重复帧、已结束的会话和总年龄达到 800ms 的图像；它们不能延长动作。
     def decode(self, jpeg, headers, request_start_ms, receive_ms):
         # HTTP field names are case insensitive, including in offline fixtures.
         h={str(k).lower():v for k,v in headers.items()}
