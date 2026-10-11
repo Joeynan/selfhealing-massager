@@ -88,7 +88,7 @@
   ],
   "source_policy": "tools/package_team.py; exact per-file digests in source-manifest.json",
   "github_publication": {
-    "published_at": "2026-10-11T15:58:17.812785+08:00",
+    "published_at": "2026-10-11T16:02:25.113977+08:00",
     "repository_url": "https://github.com/Joeynan/selfhealing-massager",
     "private": true,
     "release_url": "https://github.com/Joeynan/selfhealing-massager/releases/tag/watcher-v9-wheel",
@@ -96,7 +96,20 @@
     "download_verified": true,
     "hardware_access": false,
     "windows_workflow_url": "https://github.com/Joeynan/selfhealing-massager/actions/workflows/team-validation.yml",
-    "windows_final_recheck": "pending",
+    "windows_final_recheck": "success",
+    "windows_validation_run": "https://github.com/Joeynan/selfhealing-massager/actions/runs/38123231664",
+    "windows_tested_commit": "b4a813cf7c88b76c4225452aee4fa91bde974f76",
+    "windows_tools": {
+      "tests": 88,
+      "passed": 86,
+      "skipped": 2,
+      "failed": 0
+    },
+    "windows_console": {
+      "tests": 222,
+      "failed": 0,
+      "errors": 0
+    },
     "local_tools": {
       "tests": 88,
       "passed": 86,

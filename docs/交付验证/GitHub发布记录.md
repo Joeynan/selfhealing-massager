@@ -1,6 +1,6 @@
 # GitHub 发布记录
 
-记录时间：2026-10-11T15:58:17.812785+08:00
+记录时间：2026-10-11T16:02:25.113977+08:00
 
 - 私有仓库：[Joeynan/selfhealing-massager](https://github.com/Joeynan/selfhealing-massager)。
 - 已验证的小智 v9 应用与 v8 回滚附件：[Watcher v9 Release](https://github.com/Joeynan/selfhealing-massager/releases/tag/watcher-v9-wheel)。
@@ -15,7 +15,11 @@ Release 上传后已通过认证下载并核对 SHA256：`fa4a3fdb3d3242f622feae
 
 上传快照的本地工具测试 88 项：86 项通过，2 项固定 SDK 组件复放测试留待获取组件后的完整构建；控制台和识别规则 222 项通过。此前的完整固定 SDK 构建证据仍见 [交付报告](交付报告.md)。本次未改动两端固件或镜像。
 
-Windows GitHub Actions 已实际启动。首次验证发现 UTF-8、正在运行的虚拟环境重建、Windows 目录别名和捕获输出后按键等待和测试子进程保护的问题，相关修复均已添加回归测试。最终 Windows 自动复测结果请查看 [Team validation](https://github.com/Joeynan/selfhealing-massager/actions/workflows/team-validation.yml)；截至本记录，最终复测尚待完成，不能据本地测试宣称 Windows 全部通过。
+Windows GitHub Actions 自动验证已通过：固定依赖与模型安装、源码审计、88 项工具测试（86 项通过、2 项 SDK 组件测试跳过）、222 项控制台回归、CPU 模型加载、网页语法、离线烧录与回滚保护及离线页面启动。
+
+实际结果：[Windows 自动验证](https://github.com/Joeynan/selfhealing-massager/actions/runs/38123231664)；验证代码提交：`b4a813cf7c88b76c4225452aee4fa91bde974f76`。
+
+本次实际运行中发现并修正了 UTF-8、Windows 虚拟环境重建、目录别名、重定向输出下的等待、测试子进程保护及同一时钟刻度下的旧状态边界，均保留回归测试。
 
 Windows 完整 SDK 构建、串口烧录、摄像头与两板联动、圆屏电源及机械运动仍按 [队友验收清单](../队友验收清单.md)现场确认。
 

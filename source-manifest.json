@@ -26,16 +26,16 @@
       "sha256": "ce04f59715bfd77e68cc19bed7a6348e12b1f25a20a9acee7f40b04db104db67"
     },
     "docs/交付验证/GitHub发布记录.json": {
-      "bytes": 755,
-      "sha256": "7b5db3fd4f693eaae8827fc7a5d8b3b04a0e6312c65182fa74cb13f94b6ee460"
+      "bytes": 1104,
+      "sha256": "14e7721e973512b6e64ace3354f4307e1253db9932074ada930d9d6f38563a96"
     },
     "docs/交付验证/GitHub发布记录.md": {
-      "bytes": 2495,
-      "sha256": "988cfa66d2baaf24c00ebf2097fb481422562ac25c4eabe6070e98aa58eb3d28"
+      "bytes": 2688,
+      "sha256": "fc23dc9b86ef833cf156ccf2e9704ae885603c68c1118bfa151b16f5c756812b"
     },
     "docs/交付验证/交付报告.json": {
-      "bytes": 3657,
-      "sha256": "91851c4b54d42a845515aae62aa8b37adc609df2095b78fec5742c644445e84b"
+      "bytes": 4032,
+      "sha256": "5b8bf492d10fa794d9ff2e469137b1a40c9f354e60c055057bc2cfa8d8ca72a7"
     },
     "docs/交付验证/交付报告.md": {
       "bytes": 4091,
@@ -7827,7 +7827,7 @@
     }
   },
   "file_count": 1956,
-  "bytes": 10905297,
+  "bytes": 10906214,
   "issues": [],
   "hardware_access": false
 }
