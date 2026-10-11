@@ -698,8 +698,8 @@
       "sha256": "1e88e9d4ecf33378649067cbc3ef9a993bdd01a9d93f2778ff751692edec6e9c"
     },
     "tools/runtime_support.py": {
-      "bytes": 7262,
-      "sha256": "9d0566feba5c88603c59734a1e19f8ed048ddbc17dff7d2ec88e76b8a228119f"
+      "bytes": 7519,
+      "sha256": "931f2622deb182d11ca852ea16df4537662e8927dcab796a9f173c6c96259b67"
     },
     "tools/team_entry.py": {
       "bytes": 1841,
@@ -726,8 +726,8 @@
       "sha256": "333e08e5f522d2e15ff30be91b8bbb4b2958a4c7100c7004f962ee9b4b5049b2"
     },
     "tools/tests/test_team_runtime.py": {
-      "bytes": 19025,
-      "sha256": "db4dd08ffb51f0476f2bcb2263b8325346b934ef470b2b16a469ad79dfb15a87"
+      "bytes": 19675,
+      "sha256": "f71ca11ddfd2e4c62cad56afa93426aaa5d5a8c3bea23ef33f61addd3956a6a5"
     },
     "tools/tests/test_watcher_flash_ports.py": {
       "bytes": 3325,
@@ -7811,7 +7811,7 @@
     }
   },
   "file_count": 1952,
-  "bytes": 10893283,
+  "bytes": 10894190,
   "issues": [],
   "hardware_access": false
 }

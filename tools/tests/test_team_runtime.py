@@ -60,6 +60,17 @@ class TeamRuntimeTests(unittest.TestCase):
                     s.base_python(project, current, exclude_dirs=[runtime/'venv', runtime/'flash-venv'])
                 self.assertTrue(current.is_file())
 
+    def test_python_inside_normalizes_parent_alias_but_not_executable_symlink(self):
+        s = self.require_support()
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder); real = root/'real'; alias = root/'alias'
+            binary = real/'venv/bin/python'; binary.parent.mkdir(parents=True)
+            base = root/'base-python'; base.write_bytes(b'outside venv')
+            binary.symlink_to(base)
+            alias.symlink_to(real, target_is_directory=True)
+            self.assertTrue(s.python_inside(alias/'venv/bin/python', [real/'venv']))
+            self.assertFalse(s.python_inside(base, [real/'venv']))
+
     def test_explicit_wrong_python_does_not_silently_fall_back(self):
         s = self.require_support()
         with tempfile.TemporaryDirectory() as folder:

@@ -35,7 +35,11 @@ def python_inside(candidate: str | Path, directories) -> bool:
     # Do not resolve executable symlinks: deleting their containing venv removes
     # the invocation path even when the linked base interpreter survives.
     absolute = Path(os.path.abspath(candidate))
-    return any(absolute.is_relative_to(Path(os.path.abspath(directory))) for directory in directories)
+    # Normalize directory aliases (Windows short names) without following the
+    # executable symlink out of its venv on POSIX.
+    canonical = absolute.parent.resolve() / absolute.name
+    return any(absolute.is_relative_to(Path(os.path.abspath(directory))) or
+               canonical.is_relative_to(Path(directory).resolve()) for directory in directories)
 
 
 def base_python(project_root: Path, explicit: str | Path | None = None, *, exclude_dirs=()) -> Path:
