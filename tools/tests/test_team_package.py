@@ -45,7 +45,9 @@ class TeamPackageTests(unittest.TestCase):
                      'outputs/Watcher控制台/firmware/esp8266/watcher_controller/wifi_settings.h',
                      'outputs/Watcher控制台/烧录记录/2026-10-11/烧录前备份/application-before.bin',
                      'docs/迁移验证/当前文件清单.json', 'work/capture/person.jpg',
-                     'tools/__pycache__/private.pyc', 'tools/config/node_stubs/wifi_settings.h'):
+                     'tools/__pycache__/private.pyc', 'tools/config/node_stubs/wifi_settings.h',
+                     'work/xiaozhi-esp32/.DS_Store', 'work/xiaozhi-esp32/._README.md',
+                     'work/xiaozhi-esp32/Thumbs.db', 'work/xiaozhi-esp32/desktop.ini'):
             self.assertFalse(package.eligible(Path(name)), name)
 
     def test_secret_detection_reports_only_location(self):

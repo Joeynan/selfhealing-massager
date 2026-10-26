@@ -310,6 +310,7 @@
     const confirmed = clientFresh && profileMatches && commandKnown && modeKnown && data.last_command_seq === data.last_applied_seq && (enabled ? data.requested_mode : 0) === data.applied_mode;
     setConnection('watcher-connection', watcherOnline ? '在线' : '离线', watcherOnline ? 'online' : 'error');
     setConnection('client-connection', clientFresh ? '在线' : clientConnected ? '回报超时' : '离线', clientFresh ? 'online' : '');
+    text('watcher-wifi', !watcherOnline ? '未知' : data.wifi_connected === false ? '未连接' : data.wifi_ssid || '设备未回报');
     text('watcher-ip', data.wifi_ip || '—');
     text('watcher-firmware', data.firmware || '—');
     text('client-ip', data.client_ip || '—');
@@ -374,6 +375,7 @@
 
   function disconnected(error) {
     state.backendOnline = false;
+    text('watcher-wifi', '未知');
     text('power-state', '电源状态未知');
     $('service-dot').className = 'status-dot error';
     text('service-text', '控制台连接中断');

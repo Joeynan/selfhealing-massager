@@ -12,10 +12,10 @@
 #include "display/lcd_display.h"
 #include "gesture_face.h"
 #include "gesture_face_geometry.h"
+#include "gesture_service.h"
+#include "gesture_status_text.h"
 #include "gesture_ui.h"
 #include "gesture_ui_text.h"
-#include "gesture_status_text.h"
-#include "gesture_service.h"
 #include "knob.h"
 #include "lvgl_theme.h"
 LV_FONT_DECLARE(watcher_ui_font_20);
@@ -23,8 +23,8 @@ LV_FONT_DECLARE(watcher_ui_font_20);
 #include "onboard_camera.h"
 #include "power_save_timer.h"
 #include "sensecap_audio_codec.h"
-#include "sscma_camera.h"
 #include "source_wifi_config.h"
+#include "sscma_camera.h"
 #include "wifi_board.h"
 
 #include <driver/i2c_master.h>
@@ -65,7 +65,7 @@ class CustomLcdDisplay : public SpiLcdDisplay {
     lv_obj_t* gesture_mouth_ = nullptr;
     lv_obj_t* gesture_flat_ = nullptr;
     lv_obj_t* gesture_brows_[2] = {};
-    lv_obj_t* data_labels_[9] = {};
+    lv_obj_t* data_labels_[kGestureDataRowCount] = {};
     lv_obj_t* power_prompt_ = nullptr;
     lv_point_precise_t brow_points_[2][2] = {};
     lv_point_precise_t flat_points_[2] = {{0, 0}, {56, 0}};
@@ -78,7 +78,8 @@ class CustomLcdDisplay : public SpiLcdDisplay {
     }
 
     void EnsureGestureUI() {
-        if (gesture_root_) return;
+        if (gesture_root_)
+            return;
         auto* screen = lv_screen_active();
         lv_obj_set_style_bg_color(screen, lv_color_black(), 0);
         gesture_root_ = lv_obj_create(screen);
@@ -127,13 +128,13 @@ class CustomLcdDisplay : public SpiLcdDisplay {
         lv_obj_set_style_line_color(gesture_flat_, color, 0);
         lv_obj_set_style_line_width(gesture_flat_, 7, 0);
         lv_obj_set_style_line_rounded(gesture_flat_, true, 0);
-        for (int row = 0; row < 9; ++row) {
+        for (size_t row = 0; row < kGestureDataRowCount; ++row) {
             auto* label = data_labels_[row] = lv_label_create(gesture_data_);
             lv_obj_set_width(label, 280);
             lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, 0);
             lv_obj_set_style_text_color(label, row == 0 ? color : lv_color_hex(0xBFE9DD), 0);
             lv_label_set_long_mode(label, LV_LABEL_LONG_CLIP);
-            lv_obj_align(label, LV_ALIGN_TOP_MID, 0, 71 + row * 30);
+            lv_obj_align(label, LV_ALIGN_TOP_MID, 0, 62 + row * 28);
         }
         power_prompt_ = lv_label_create(gesture_root_);
         lv_obj_set_width(power_prompt_, 280);
@@ -151,13 +152,14 @@ class CustomLcdDisplay : public SpiLcdDisplay {
         face_timer_ = lv_timer_create(
             [](lv_timer_t* timer) {
                 static_cast<CustomLcdDisplay*>(lv_timer_get_user_data(timer))->AnimateGestureFace();
-            }, 50, this);
+            },
+            50, this);
         lv_timer_pause(face_timer_);
     }
 
     void UpdateGestureData() {
         const auto lines = GestureDataRows(presentation_);
-        for (int row = 0; row < 9; ++row)
+        for (size_t row = 0; row < kGestureDataRowCount; ++row)
             lv_label_set_text(data_labels_[row], lines[row].c_str());
         data_updated_ = lv_tick_get();
     }
@@ -173,7 +175,8 @@ public:
         // LVGL invokes the timer under its own mutex. This path never reads the
         // control service, battery, network, or allocates replacement objects.
         if (!gesture_face_ || presentation_.power != GesturePowerState::Active ||
-            presentation_.page != GestureDisplayPage::Expression) return;
+            presentation_.page != GestureDisplayPage::Expression)
+            return;
         const auto tick = lv_tick_get();
         const auto target = GestureFaceGeometry(presentation_.mode, presentation_.connected, tick);
         const float fraction = std::min(1.0f, (tick - face_changed_) / 250.0f);
@@ -187,11 +190,11 @@ public:
             brow_points_[eye][0] = {0, eye ? 17 : 0};
             brow_points_[eye][1] = {80, eye ? 0 : 17};
             lv_line_set_points(gesture_brows_[eye], brow_points_[eye], 2);
-            lv_obj_align(gesture_brows_[eye], LV_ALIGN_CENTER, eye ? 82 : -82,
-                         face_drawn_.brow_y);
+            lv_obj_align(gesture_brows_[eye], LV_ALIGN_CENTER, eye ? 82 : -82, face_drawn_.brow_y);
             if (face_drawn_.show_brows)
                 lv_obj_remove_flag(gesture_brows_[eye], LV_OBJ_FLAG_HIDDEN);
-            else lv_obj_add_flag(gesture_brows_[eye], LV_OBJ_FLAG_HIDDEN);
+            else
+                lv_obj_add_flag(gesture_brows_[eye], LV_OBJ_FLAG_HIDDEN);
         }
         lv_obj_align(gesture_flat_, LV_ALIGN_CENTER, face_drawn_.mouth_x, face_drawn_.mouth_y);
         lv_obj_align(gesture_mouth_, LV_ALIGN_CENTER, face_drawn_.mouth_x, face_drawn_.mouth_y);
@@ -203,22 +206,30 @@ public:
             lv_obj_add_flag(gesture_flat_, LV_OBJ_FLAG_HIDDEN);
             const bool frown = face_drawn_.mouth == GestureMouth::Frown;
             const bool puzzled = face_drawn_.mouth == GestureMouth::Puzzled;
-            lv_arc_set_angles(gesture_mouth_, frown ? 210 : puzzled ? 220 : 20,
-                              frown ? 330 : puzzled ? 320 : 160);
+            lv_arc_set_angles(gesture_mouth_,
+                              frown     ? 210
+                              : puzzled ? 220
+                                        : 20,
+                              frown     ? 330
+                              : puzzled ? 320
+                                        : 160);
         }
     }
 
     bool SetGesturePresentation(const DisplaySnapshot& snapshot) {
-        if (!IsSetupUICalled()) return false;
+        if (!IsSetupUICalled())
+            return false;
         DisplayLockGuard lock(this);
-        if (!lock) return false;
+        if (!lock)
+            return false;
         EnsureGestureUI();
         const bool changed = !have_presentation_ || presentation_.mode != snapshot.mode ||
                              presentation_.connected != snapshot.connected;
         const bool page_changed = !have_presentation_ || presentation_.page != snapshot.page;
         if (changed) {
             face_from_ = have_presentation_ ? face_drawn_
-                         : GestureFaceGeometry(snapshot.mode, snapshot.connected, lv_tick_get());
+                                            : GestureFaceGeometry(snapshot.mode, snapshot.connected,
+                                                                  lv_tick_get());
             face_changed_ = lv_tick_get();
         }
         presentation_ = snapshot;
@@ -229,26 +240,33 @@ public:
         if (expression) {
             lv_obj_remove_flag(gesture_face_, LV_OBJ_FLAG_HIDDEN);
             const bool starting_animation = !animation_running_;
-            if (starting_animation) lv_timer_resume(face_timer_);
+            if (starting_animation)
+                lv_timer_resume(face_timer_);
             animation_running_ = true;
             // Snapshot delivery is independent of the 20 fps animation clock.
             // Only paint here for an immediate first/page/state transition.
-            if (changed || page_changed || starting_animation) AnimateGestureFace();
+            if (changed || page_changed || starting_animation)
+                AnimateGestureFace();
         } else {
             lv_obj_add_flag(gesture_face_, LV_OBJ_FLAG_HIDDEN);
-            if (animation_running_) lv_timer_pause(face_timer_);
+            if (animation_running_)
+                lv_timer_pause(face_timer_);
             animation_running_ = false;
         }
         if (data) {
             lv_obj_remove_flag(gesture_data_, LV_OBJ_FLAG_HIDDEN);
-            if (page_changed || lv_tick_get() - data_updated_ >= 250) UpdateGestureData();
-        } else lv_obj_add_flag(gesture_data_, LV_OBJ_FLAG_HIDDEN);
+            if (page_changed || lv_tick_get() - data_updated_ >= 250)
+                UpdateGestureData();
+        } else
+            lv_obj_add_flag(gesture_data_, LV_OBJ_FLAG_HIDDEN);
         if (snapshot.power == GesturePowerState::ShuttingDown && !snapshot.power_prompt.empty()) {
             lv_label_set_text(power_prompt_, snapshot.power_prompt.c_str());
             lv_obj_remove_flag(power_prompt_, LV_OBJ_FLAG_HIDDEN);
-        } else lv_obj_add_flag(power_prompt_, LV_OBJ_FLAG_HIDDEN);
+        } else
+            lv_obj_add_flag(power_prompt_, LV_OBJ_FLAG_HIDDEN);
         lv_obj_move_foreground(gesture_root_);
-        if (active) lv_obj_move_foreground(low_battery_popup_);
+        if (active)
+            lv_obj_move_foreground(low_battery_popup_);
         return true;
     }
 
@@ -428,36 +446,43 @@ private:
     bool UsbPresent() { return IoExpanderGetLevel(BSP_PWR_VBUS_IN_DET) == 0; }
 
     void RequestShutdown() {
-        if (shutdown_pending_.exchange(true)) return;
+        if (shutdown_pending_.exchange(true))
+            return;
         GestureService::Instance().BeginPowerStop();
         GestureService::Instance().MarkPowerReleased();
         // No wait in button/LVGL/app callbacks. Keep the USB system rail alive
         // so the button driver can still see a later 3-second wake gesture.
-        if (xTaskCreate([](void* context) {
-                auto* self = static_cast<SensecapWatcher*>(context);
-                uint32_t started = esp_timer_get_time() / 1000;
-                while (!GestureService::Instance().SafeToShutdown() &&
-                       uint32_t(esp_timer_get_time() / 1000 - started) < 850)
-                    vTaskDelay(pdMS_TO_TICKS(20));
-                self->GetBacklight()->SetBrightness(0);
-                if (self->panel_) esp_lcd_panel_disp_on_off(self->panel_, false);
-                if (self->UsbPresent()) {
-                    GestureService::Instance().EnterStandby();
-                    self->shutdown_pending_ = false;
-                } else {
-                    self->IoExpanderSetLevel(BSP_PWR_LCD, 0);
-                    self->IoExpanderSetLevel(BSP_PWR_SYSTEM, 0);
-                }
-                vTaskDelete(nullptr);
-            }, "gesture_power", 3072, this, 3, nullptr) != pdPASS) {
+        if (xTaskCreate(
+                [](void* context) {
+                    auto* self = static_cast<SensecapWatcher*>(context);
+                    uint32_t started = esp_timer_get_time() / 1000;
+                    while (!GestureService::Instance().SafeToShutdown() &&
+                           uint32_t(esp_timer_get_time() / 1000 - started) < 850)
+                        vTaskDelay(pdMS_TO_TICKS(20));
+                    self->GetBacklight()->SetBrightness(0);
+                    if (self->panel_)
+                        esp_lcd_panel_disp_on_off(self->panel_, false);
+                    if (self->UsbPresent()) {
+                        GestureService::Instance().EnterStandby();
+                        self->shutdown_pending_ = false;
+                    } else {
+                        self->IoExpanderSetLevel(BSP_PWR_LCD, 0);
+                        self->IoExpanderSetLevel(BSP_PWR_SYSTEM, 0);
+                    }
+                    vTaskDelete(nullptr);
+                },
+                "gesture_power", 3072, this, 3, nullptr) != pdPASS) {
             // Remain guarded if task creation fails; a second release can retry.
             shutdown_pending_ = false;
         }
     }
     void ResumeFromStandby() {
-        if (shutdown_pending_ || !UsbPresent()) return;
-        if (panel_) esp_lcd_panel_disp_on_off(panel_, true);
-        if (GestureService::Instance().ResumePower()) GetBacklight()->RestoreBrightness();
+        if (shutdown_pending_ || !UsbPresent())
+            return;
+        if (panel_)
+            esp_lcd_panel_disp_on_off(panel_, true);
+        if (GestureService::Instance().ResumePower())
+            GetBacklight()->RestoreBrightness();
     }
     void TickPowerButton() {
         ButtonAction action;
@@ -480,39 +505,50 @@ private:
             return !instance_->IoExpanderGetLevel(BSP_KNOB_BTN);
         };
         ESP_ERROR_CHECK(iot_button_create(&btn_config, btn_driver_, &btns));
-        iot_button_register_cb(btns, BUTTON_PRESS_DOWN, nullptr, [](void*, void* context) {
-            auto* self = static_cast<SensecapWatcher*>(context);
-            std::lock_guard<std::mutex> l(self->button_mutex_);
-            self->button_policy_.Down(esp_timer_get_time() / 1000);
-        }, this);
+        iot_button_register_cb(
+            btns, BUTTON_PRESS_DOWN, nullptr,
+            [](void*, void* context) {
+                auto* self = static_cast<SensecapWatcher*>(context);
+                std::lock_guard<std::mutex> l(self->button_mutex_);
+                self->button_policy_.Down(esp_timer_get_time() / 1000);
+            },
+            this);
         auto hold = [](void*, void* context) {
             static_cast<SensecapWatcher*>(context)->TickPowerButton();
         };
         iot_button_register_cb(btns, BUTTON_LONG_PRESS_START, nullptr, hold, this);
         iot_button_register_cb(btns, BUTTON_LONG_PRESS_HOLD, nullptr, hold, this);
-        iot_button_register_cb(btns, BUTTON_PRESS_UP, nullptr, [](void*, void* context) {
-            auto* self = static_cast<SensecapWatcher*>(context);
-            ButtonAction action;
-            {
-                std::lock_guard<std::mutex> l(self->button_mutex_);
-                action = self->button_policy_.Up(esp_timer_get_time() / 1000);
-            }
-            if (action != ButtonAction::Shutdown) return;
-            if (GestureService::Instance().PowerState() == GesturePowerState::Standby)
-                self->ResumeFromStandby();
-            else self->RequestShutdown();
-        }, this);
+        iot_button_register_cb(
+            btns, BUTTON_PRESS_UP, nullptr,
+            [](void*, void* context) {
+                auto* self = static_cast<SensecapWatcher*>(context);
+                ButtonAction action;
+                {
+                    std::lock_guard<std::mutex> l(self->button_mutex_);
+                    action = self->button_policy_.Up(esp_timer_get_time() / 1000);
+                }
+                if (action != ButtonAction::Shutdown)
+                    return;
+                if (GestureService::Instance().PowerState() == GesturePowerState::Standby)
+                    self->ResumeFromStandby();
+                else
+                    self->RequestShutdown();
+            },
+            this);
     }
     void StartPowerMonitor() {
-        xTaskCreate([](void* context) {
-            auto* self = static_cast<SensecapWatcher*>(context);
-            for (;;) {
-                self->TickPowerButton();
-                if (GestureService::Instance().PowerState() == GesturePowerState::Standby &&
-                    !self->UsbPresent()) self->RequestShutdown();
-                vTaskDelay(pdMS_TO_TICKS(20));
-            }
-        }, "gesture_vbus", 2048, this, 2, nullptr);
+        xTaskCreate(
+            [](void* context) {
+                auto* self = static_cast<SensecapWatcher*>(context);
+                for (;;) {
+                    self->TickPowerButton();
+                    if (GestureService::Instance().PowerState() == GesturePowerState::Standby &&
+                        !self->UsbPresent())
+                        self->RequestShutdown();
+                    vTaskDelay(pdMS_TO_TICKS(20));
+                }
+            },
+            "gesture_vbus", 2048, this, 2, nullptr);
     }
 
     void InitializeSpi() {
@@ -912,8 +948,10 @@ SensecapWatcher* SensecapWatcher::instance_ = nullptr;
 bool WatcherShowGesturePresentation(DisplaySnapshot snapshot) {
     auto& board = Board::GetInstance();
     auto* display = static_cast<CustomLcdDisplay*>(board.GetDisplay());
-    if (!display) return false;
-    int battery; bool charging, discharging;
+    if (!display)
+        return false;
+    int battery;
+    bool charging, discharging;
     if (snapshot.power == GesturePowerState::Active &&
         board.GetBatteryLevel(battery, charging, discharging)) {
         snapshot.battery_percent = battery;
@@ -922,6 +960,7 @@ bool WatcherShowGesturePresentation(DisplaySnapshot snapshot) {
     // Battery reads can initiate low-battery shutdown. Never resurrect a stale
     // Active snapshot or restore brightness after that guard has been set.
     snapshot.power = GestureService::Instance().PowerState();
-    if (!display->SetGesturePresentation(snapshot)) return false;
+    if (!display->SetGesturePresentation(snapshot))
+        return false;
     return true;
 }

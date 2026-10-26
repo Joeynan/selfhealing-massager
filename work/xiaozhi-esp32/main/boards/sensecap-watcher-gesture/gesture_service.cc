@@ -1,12 +1,12 @@
 // Watcher 控制中心：接收电脑观察，维护表情/动作保持状态，再向黑板转发 SET2。
 // 黑板的短租约受动作、观察、摄像头剩余时间限制；回执只证明软件接受/提交。
 #include "gesture_service.h"
+#include <esp_heap_caps.h>
 #include <esp_mac.h>
 #include <esp_netif.h>
+#include <esp_system.h>
 #include <esp_timer.h>
 #include <esp_wifi.h>
-#include <esp_system.h>
-#include <esp_heap_caps.h>
 #include "wifi_frame_decoder.h"
 #if __has_include("mdns.h")
 #include <mdns.h>
@@ -22,19 +22,41 @@
 #include <cstdio>
 #include <cstdlib>
 #include "application.h"
+#include "arm_stop_barrier.h"
 #include "board.h"
+#include "camera_source_switch.h"
 #include "display/display.h"
 #include "display_receipt.h"
 #include "gesture_face.h"
 #include "gesture_status_text.h"
+#include "mode_lease_tail.h"
+#include "servo_test_tail.h"
 #include "settings.h"
 #include "stop_protocol.h"
-#include "servo_test_tail.h"
-#include "arm_stop_barrier.h"
-#include "camera_source_switch.h"
-#include "mode_lease_tail.h"
 namespace {
 uint32_t Now() { return esp_timer_get_time() / 1000; }
+struct WifiConnectionSnapshot {
+    bool connected = false;
+    std::string ssid;
+    std::string ip;
+};
+// 读取当前关联的 AP，而不是保存的候选网络；掉线后不把旧 IP/SSID 当作在线状态。
+// 网络读取在控制锁之外完成，网页与数据页使用相同的数据来源。
+WifiConnectionSnapshot ReadWifiConnection() {
+    WifiConnectionSnapshot result;
+    wifi_ap_record_t ap{};
+    esp_netif_ip_info_t ip{};
+    auto* netif = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
+    if (esp_wifi_sta_get_ap_info(&ap) != ESP_OK || !netif ||
+        esp_netif_get_ip_info(netif, &ip) != ESP_OK || !ip.ip.addr)
+        return result;
+    char address[16];
+    snprintf(address, sizeof(address), IPSTR, IP2STR(&ip.ip));
+    result.connected = true;
+    result.ssid = GestureWifiName(ap.ssid, sizeof(ap.ssid));
+    result.ip = address;
+    return result;
+}
 const char* Label(uint8_t m) {
     return m == 1 ? "pounding" : m == 2 ? "kneading" : m == 3 ? "pinch" : "stop";
 }
@@ -45,7 +67,7 @@ const char* Reason(uint8_t n) {
            : n == 4 ? "link_lost"
            : n == 5 ? "arm_changed"
            : n == 6 ? "calibration_test"
-                    : n == 8 ? "late_deadline"
+           : n == 8 ? "late_deadline"
                     : "profile_changed";
 }
 void Network() {
@@ -188,7 +210,8 @@ void GestureService::Start(bool ready) {
 void GestureService::Submit(const char*, int) {}
 void GestureService::SubmitLandmarks(const onboard::Frame& frame) {
     std::lock_guard<std::mutex> l(mutex_);
-    if (!power_.Active()) return;
+    if (!power_.Active())
+        return;
     // Only one latest observation is retained; no inference backlog can renew a lease.
     latest_ = frame;
     frame_pending_ = true;
@@ -225,9 +248,8 @@ void GestureService::StopDisarm(const char* reason) {
 }
 bool GestureService::ArmFromButton() {
     std::lock_guard<std::mutex> l(mutex_);
-    bool ready = !shutting_down_ && capable_ && client_hold_protocol_ == 2 &&
-                 clock_.Fresh(Now()) && client_connected_ && profile_match_ &&
-                 !arm_in_flight_ &&
+    bool ready = !shutting_down_ && capable_ && client_hold_protocol_ == 2 && clock_.Fresh(Now()) &&
+                 client_connected_ && profile_match_ && !arm_in_flight_ &&
                  (input_source_ != "onboard" ||
                   (model_ready_ && vision_calibrated_ && local_capture_.Seen() &&
                    uint32_t(Now() - local_capture_.Captured()) < 800)) &&
@@ -246,17 +268,28 @@ bool GestureService::SafeToShutdown() {
 }
 bool GestureService::BeginPowerStop() {
     std::lock_guard<std::mutex> l(mutex_);
-    if (!power_.BeginShutdown()) return false;
+    if (!power_.BeginShutdown())
+        return false;
     // Preserve the user's continuous-output preference while stopping admission.
     shutting_down_ = true;
     power_released_ = false;
     StopLocked("power_hold", true);
-    hold_.Reset(); clock_.Reset(); camera_observation_version_ = 0;
-    camera_frame_.reset(); camera_session_ = 0; camera_power_epoch_ = 0;
-    camera_ledger_.Begin(0); camera_error_ = "power_standby";
-    engine_.Reset(); tracker_.Reset(); recognition_ = {};
-    latest_ = {}; observed_ = {}; frame_pending_ = false;
-    local_capture_ = {}; armed_at_ms_ = 0;
+    hold_.Reset();
+    clock_.Reset();
+    camera_observation_version_ = 0;
+    camera_frame_.reset();
+    camera_session_ = 0;
+    camera_power_epoch_ = 0;
+    camera_ledger_.Begin(0);
+    camera_error_ = "power_standby";
+    engine_.Reset();
+    tracker_.Reset();
+    recognition_ = {};
+    latest_ = {};
+    observed_ = {};
+    frame_pending_ = false;
+    local_capture_ = {};
+    armed_at_ms_ = 0;
     return true;
 }
 void GestureService::MarkPowerReleased() {
@@ -269,17 +302,28 @@ void GestureService::EnterStandby() {
 }
 bool GestureService::ResumePower() {
     std::lock_guard<std::mutex> l(mutex_);
-    if (!power_.Resume()) return false;
+    if (!power_.Resume())
+        return false;
     StopLocked("power_resume", true);
     shutting_down_ = false;
     power_released_ = false;
     // The next capture owns a new session. Neither old frames nor receipts may arm.
-    hold_.Reset(); clock_.Reset(); camera_observation_version_ = 0;
-    camera_frame_.reset(); camera_session_ = 0; camera_power_epoch_ = 0;
-    camera_ledger_.Begin(0); camera_error_ = "awaiting_camera_frame";
-    engine_.Reset(); tracker_.Reset(); recognition_ = {};
-    latest_ = {}; observed_ = {}; frame_pending_ = false;
-    local_capture_ = {}; armed_at_ms_ = 0;
+    hold_.Reset();
+    clock_.Reset();
+    camera_observation_version_ = 0;
+    camera_frame_.reset();
+    camera_session_ = 0;
+    camera_power_epoch_ = 0;
+    camera_ledger_.Begin(0);
+    camera_error_ = "awaiting_camera_frame";
+    engine_.Reset();
+    tracker_.Reset();
+    recognition_ = {};
+    latest_ = {};
+    observed_ = {};
+    frame_pending_ = false;
+    local_capture_ = {};
+    armed_at_ms_ = 0;
     display_page_ = GestureDisplayPage::Expression;
     return true;
 }
@@ -304,28 +348,38 @@ DisplaySnapshot GestureService::DisplayState() {
     const uint32_t now = Now();
     requested_.Tick(now);
     DisplaySnapshot s;
-    s.page = display_page_; s.power = power_.State();
-    s.mode = input_source_ == "camera" && camera_observation_version_ == 2 ? hold_.Face(now) : requested_.Mode();
+    s.page = display_page_;
+    s.power = power_.State();
+    s.mode = input_source_ == "camera" && camera_observation_version_ == 2 ? hold_.Face(now)
+                                                                           : requested_.Mode();
     s.connected = client_connected_;
     s.output_preference = continuous_output_.Enabled();
-    s.camera_fresh = power_.Active() && (input_source_ == "camera" ?
-        camera_frame_ && uint32_t(now - camera_frame_->captured) < 800 :
-        input_source_ == "onboard" && local_capture_.Seen() && uint32_t(now - local_capture_.Captured()) < 800);
-    s.recognition_fresh = power_.Active() && (input_source_ == "camera" ?
-        camera_observation_version_ == 2 && hold_.Healthy(now) :
-        input_source_ == "simulation" || (model_ready_ && vision_calibrated_ && s.camera_fresh));
+    s.camera_fresh =
+        power_.Active() &&
+        (input_source_ == "camera" ? camera_frame_ && uint32_t(now - camera_frame_->captured) < 800
+                                   : input_source_ == "onboard" && local_capture_.Seen() &&
+                                         uint32_t(now - local_capture_.Captured()) < 800);
+    s.recognition_fresh =
+        power_.Active() &&
+        (input_source_ == "camera" ? camera_observation_version_ == 2 && hold_.Healthy(now)
+                                   : input_source_ == "simulation" ||
+                                         (model_ready_ && vision_calibrated_ && s.camera_fresh));
     s.pulse_fresh = client_connected_ && last_ack_ms_ && uint32_t(now - last_ack_ms_) < 600;
     s.servo_ready = power_.Active() && outputs_enabled_ && wanted_arm_ && profile_match_ &&
-        capable_ && client_hold_protocol_ == 2 && clock_.Fresh(now) && s.pulse_fresh;
+                    capable_ && client_hold_protocol_ == 2 && clock_.Fresh(now) && s.pulse_fresh;
     uint16_t expected[3] = {requested_.Pulse(0), requested_.Pulse(1), requested_.Pulse(2)};
     s.pending = FaceNeedsReceipt(requested_.Mode(), wanted_arm_, outputs_enabled_) &&
-        (!s.servo_ready || !HasCurrentServoReceipt(s.mode, intent_sequence_, applied_intent_,
-            applied_mode_, expected, pulse_us_, last_ack_ms_, now));
-    s.hold_remaining_ms = input_source_ == "camera" && camera_observation_version_ == 2 ?
-        hold_.FaceRemaining(now) : requested_.Remaining(now);
-    for (int i = 0; i < 3; ++i) s.pulses_us[i] = pulse_us_[i];
+                (!s.servo_ready ||
+                 !HasCurrentServoReceipt(s.mode, intent_sequence_, applied_intent_, applied_mode_,
+                                         expected, pulse_us_, last_ack_ms_, now));
+    s.hold_remaining_ms = input_source_ == "camera" && camera_observation_version_ == 2
+                              ? hold_.FaceRemaining(now)
+                              : requested_.Remaining(now);
+    for (int i = 0; i < 3; ++i)
+        s.pulses_us[i] = pulse_us_[i];
     s.board_ip = client_ip_;
-    if (s.power == GesturePowerState::ShuttingDown) s.power_prompt = power_released_ ? "正在关闭" : "松开滚轮后关机";
+    if (s.power == GesturePowerState::ShuttingDown)
+        s.power_prompt = power_released_ ? "正在关闭" : "松开滚轮后关机";
     return s;
 }
 bool GestureService::SwitchSource(const std::string& source, uint32_t* accepted_stop_generation,
@@ -342,13 +396,15 @@ bool GestureService::SwitchSource(const std::string& source, uint32_t* accepted_
     if (accepted_stop_generation)
         *accepted_stop_generation = stop_generation_;
     ResetCameraCaptureOnSourceSwitch(previous_camera, source == "camera", camera_session_,
-                                    camera_ledger_, camera_frame_, camera_error_);
-    hold_.Reset(); camera_observation_version_ = 0;
+                                     camera_ledger_, camera_frame_, camera_error_);
+    hold_.Reset();
+    camera_observation_version_ = 0;
     return true;
 }
 bool GestureService::CameraActive() {
     std::lock_guard<std::mutex> l(mutex_);
-    if (!power_.Active()) return false;
+    if (!power_.Active())
+        return false;
     return input_source_ == "onboard"
                ? local_capture_.Seen() && uint32_t(Now() - local_capture_.Captured()) < 800
                : input_source_ == "camera" && camera_frame_ &&
@@ -367,13 +423,15 @@ void GestureService::BeginCamera(uint32_t session) {
     camera_session_ = session;
     camera_power_epoch_ = power_.Epoch();
     camera_ledger_.Begin(session);
-    hold_.Reset(); camera_observation_version_ = 0;
+    hold_.Reset();
+    camera_observation_version_ = 0;
     camera_frame_.reset();
     camera_error_ = "awaiting_camera_frame";
 }
 bool GestureService::SubmitCamera(std::shared_ptr<const wifi_camera::Frame> frame) {
     std::lock_guard<std::mutex> l(mutex_);
-    if (!power_.Active() || !power_.Accept(camera_power_epoch_) || !frame || !owner_.Accept("camera") ||
+    if (!power_.Active() || !power_.Accept(camera_power_epoch_) || !frame ||
+        !owner_.Accept("camera") ||
         !camera_ledger_.Record(frame->session, frame->id, frame->captured, Now()))
         return false;
     camera_frame_ = std::move(frame);
@@ -389,7 +447,8 @@ void GestureService::CameraFault(const char* reason) {
     camera_frame_.reset();
     camera_ledger_.Begin(0);
     StopLocked(reason, true);
-    hold_.Reset(); camera_observation_version_ = 0;
+    hold_.Reset();
+    camera_observation_version_ = 0;
 }
 // 统一处理时效与自动启用：新手势可立即切换，失联/异常取消动作，旧确认不能重放。
 void GestureService::RulesLoop() {
@@ -452,24 +511,29 @@ void GestureService::RulesLoop() {
             advertise = mdns_ready_;
 #endif
             if (owner_.Accept("camera")) {
-                const bool capture_ok = camera_frame_ && uint32_t(now - camera_frame_->captured) < 800;
+                const bool capture_ok =
+                    camera_frame_ && uint32_t(now - camera_frame_->captured) < 800;
                 if (!capture_ok && (wanted_arm_ || requested_.Mode() || hold_.Face(now))) {
                     StopLocked("camera_frame_timeout", true);
                     hold_.Reset();
                 } else if (camera_observation_version_ == 2) {
-                    if (!hold_.Healthy(now) && (wanted_arm_ || requested_.Mode() || hold_.Face(now))) {
+                    if (!hold_.Healthy(now) &&
+                        (wanted_arm_ || requested_.Mode() || hold_.Face(now))) {
                         StopLocked("camera_result_timeout", true);
                         hold_.Reset();
                     } else {
                         uint8_t mode = hold_.Motion(now);
-                        uint32_t rem = camera_frame_ ? hold_.MotionRemaining(now, camera_frame_->captured) : 0;
+                        uint32_t rem =
+                            camera_frame_ ? hold_.MotionRemaining(now, camera_frame_->captured) : 0;
                         requested_.Tick(now);
                         if (requested_.Mode() != mode) {
                             ++intent_sequence_;
                             stop_reason_ = mode ? "" : hold_.Reason();
                         }
-                        requested_.Apply({++input_sequence_, mode,
-                            uint16_t(std::max<uint32_t>(100, std::min<uint32_t>(600, rem)))}, now);
+                        requested_.Apply(
+                            {++input_sequence_, mode,
+                             uint16_t(std::max<uint32_t>(100, std::min<uint32_t>(600, rem)))},
+                            now);
                     }
                 } else if (wanted_arm_) {
                     StopLocked("observation_protocol_required", true);
@@ -516,39 +580,49 @@ void GestureService::RulesLoop() {
 }
 bool GestureService::SetInput(const std::string& label, const std::string& source, uint16_t lease,
                               uint32_t session, uint32_t frame, uint32_t age,
-                              uint8_t observation_version, ObservationKind kind,
-                              bool confirmed, bool hand, uint32_t confirmation_age, uint32_t power_epoch) {
+                              uint8_t observation_version, ObservationKind kind, bool confirmed,
+                              bool hand, uint32_t confirmation_age, uint32_t power_epoch) {
     uint8_t m = label == "pounding" ? 1 : label == "kneading" ? 2 : label == "pinch" ? 3 : 0;
-    if ((!m && label != "stop") || (source != "simulation" && source != "camera") || lease < 100 || lease > 600)
+    if ((!m && label != "stop") || (source != "simulation" && source != "camera") || lease < 100 ||
+        lease > 600)
         return false;
     std::lock_guard<std::mutex> l(mutex_);
-    if (!power_.Active() || (power_epoch && !power_.Accept(power_epoch)) || !owner_.Accept(source)) return false;
+    if (!power_.Active() || (power_epoch && !power_.Accept(power_epoch)) || !owner_.Accept(source))
+        return false;
     uint32_t now = Now();
     if (source == "camera" && observation_version == 2) {
         // Validate shape before consuming proof; invalid bodies never renew health.
         GestureHold validator;
-        if (!validator.Observe(now, m, kind, confirmed, hand, confirmation_age, now)) return false;
+        if (!validator.Observe(now, m, kind, confirmed, hand, confirmation_age, now))
+            return false;
         uint32_t captured;
         if (!camera_ledger_.Observe(session, frame, age, now, captured) ||
-            !hold_.Observe(captured, m, kind, confirmed, hand, confirmation_age, now)) return false;
+            !hold_.Observe(captured, m, kind, confirmed, hand, confirmation_age, now))
+            return false;
         camera_observation_version_ = 2;
         if (kind == ObservationKind::Error) {
-            StopLocked("recognition_error", true); hold_.Reset(); return true;
+            StopLocked("recognition_error", true);
+            hold_.Reset();
+            return true;
         }
         uint8_t mode = hold_.Motion(now);
-        if (test_active_ || requested_.Mode() != mode) ++intent_sequence_;
+        if (test_active_ || requested_.Mode() != mode)
+            ++intent_sequence_;
         test_active_ = false;
         stop_reason_ = mode ? "" : hold_.Reason();
         return requested_.Apply({++input_sequence_, mode, 600}, now);
     }
     if (source == "camera") {
         // Legacy observations are preview only and cannot coexist with armed v2 state.
-        if (wanted_arm_ || outputs_enabled_ || camera_observation_version_ == 2) return false;
-        if (!camera_ledger_.Consume(session, frame, age, lease, now, lease)) return false;
+        if (wanted_arm_ || outputs_enabled_ || camera_observation_version_ == 2)
+            return false;
+        if (!camera_ledger_.Consume(session, frame, age, lease, now, lease))
+            return false;
         camera_observation_version_ = 0;
     }
     requested_.Tick(now);
-    if (test_active_ || requested_.Mode() != m) ++intent_sequence_;
+    if (test_active_ || requested_.Mode() != m)
+        ++intent_sequence_;
     test_active_ = false;
     stop_reason_ = m ? "" : "input_stop";
     return requested_.Apply({++input_sequence_, m, lease}, now);
@@ -582,6 +656,7 @@ bool GestureService::Event(const char* line) {
     return true;
 }
 std::string GestureService::Status() {
+    const auto wifi = ReadWifiConnection();
     std::lock_guard<std::mutex> l(mutex_);
     uint32_t now = Now();
     requested_.Tick(now);
@@ -602,7 +677,8 @@ std::string GestureService::Status() {
     num("reset_reason", esp_reset_reason());
     num("heap_free_bytes", esp_get_free_heap_size());
     num("heap_min_free_bytes", esp_get_minimum_free_heap_size());
-    num("internal_largest_free_bytes", heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT));
+    num("internal_largest_free_bytes",
+        heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT));
     num("psram_largest_free_bytes", heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM));
     num("http_task_stack_watermark", uxTaskGetStackHighWaterMark(nullptr));
     str("watcher_id", watcher_id_.c_str());
@@ -632,7 +708,9 @@ std::string GestureService::Status() {
     boolean("camera_result_active", camera_ledger_.ResultActive(now));
     num("camera_width", camera_frame_ ? camera_frame_->width : 0);
     num("camera_height", camera_frame_ ? camera_frame_->height : 0);
-    boolean("display_preview", (camera_observation_version_ == 2 ? hold_.Face(now) : requested_.Mode()) && !wanted_arm_ && !outputs_enabled_);
+    boolean("display_preview",
+            (camera_observation_version_ == 2 ? hold_.Face(now) : requested_.Mode()) &&
+                !wanted_arm_ && !outputs_enabled_);
     bool camera_active =
         input_source_ == "onboard"
             ? local_capture_.Seen() && uint32_t(now - local_capture_.Captured()) < 800
@@ -650,12 +728,17 @@ std::string GestureService::Status() {
     str("display_state", emotion_.c_str());
     boolean("display_animation", true);
     str("input_source", input_source_.c_str());
-    const uint8_t presentation = input_source_ == "camera" && camera_observation_version_ == 2 ? hold_.Face(now) : requested_.Mode();
+    const uint8_t presentation = input_source_ == "camera" && camera_observation_version_ == 2
+                                     ? hold_.Face(now)
+                                     : requested_.Mode();
     str("held_gesture", Label(presentation));
     str("expression_gesture", Label(presentation));
-    num("hold_remaining_ms", input_source_ == "camera" ? hold_.FaceRemaining(now) : requested_.Remaining(now));
-    num("expression_remaining_ms", input_source_ == "camera" ? hold_.FaceRemaining(now) : requested_.Remaining(now));
-    num("servo_hold_remaining_ms", input_source_ == "camera" && hold_.Motion(now) ? hold_.FaceRemaining(now) : 0);
+    num("hold_remaining_ms",
+        input_source_ == "camera" ? hold_.FaceRemaining(now) : requested_.Remaining(now));
+    num("expression_remaining_ms",
+        input_source_ == "camera" ? hold_.FaceRemaining(now) : requested_.Remaining(now));
+    num("servo_hold_remaining_ms",
+        input_source_ == "camera" && hold_.Motion(now) ? hold_.FaceRemaining(now) : 0);
     str("observation_state", ObservationLabel(hold_.Kind()));
     num("hold_event_id", hold_.Events());
     num("mac_observation_version", camera_observation_version_);
@@ -664,9 +747,12 @@ std::string GestureService::Status() {
     num("armed_at_ms", armed_at_ms_);
     boolean("clock_fresh", clock_.Fresh(now));
     uint16_t expected[3] = {profile_.neutral[0], profile_.neutral[1], profile_.neutral[2]};
-    if (requested_.Mode()) expected[requested_.Mode() - 1] = profile_.run[requested_.Mode() - 1];
-    boolean("execution_pending", FaceNeedsReceipt(requested_.Mode(), wanted_arm_, outputs_enabled_) &&
-        !HasCurrentServoReceipt(requested_.Mode(), intent_sequence_, applied_intent_, applied_mode_, expected, pulse_us_, last_ack_ms_, now));
+    if (requested_.Mode())
+        expected[requested_.Mode() - 1] = profile_.run[requested_.Mode() - 1];
+    boolean("execution_pending",
+            FaceNeedsReceipt(requested_.Mode(), wanted_arm_, outputs_enabled_) &&
+                !HasCurrentServoReceipt(requested_.Mode(), intent_sequence_, applied_intent_,
+                                        applied_mode_, expected, pulse_us_, last_ack_ms_, now));
     str("gesture", Label(requested_.Mode()));
     num("requested_mode", requested_.Mode());
     num("applied_mode", applied_mode_);
@@ -679,7 +765,8 @@ std::string GestureService::Status() {
     str("output_type", "continuous_servo");
     str("client_ip", client_ip_.c_str());
     str("client_mac", client_mac_.c_str());
-    str("client_firmware", client_hold_protocol_ == 2 ? "esp8266-servo-controller-v7" : "legacy-preview-only");
+    str("client_firmware",
+        client_hold_protocol_ == 2 ? "esp8266-servo-controller-v7" : "legacy-preview-only");
     str("last_peer", observed_peer_.c_str());
     num("last_command_seq", command_sequence_);
     num("last_applied_seq", last_applied_seq_);
@@ -718,13 +805,11 @@ std::string GestureService::Status() {
             cJSON_AddItemToArray(a, cJSON_CreateNumber(e.pulse[i]));
         cJSON_AddItemToArray(es, x);
     }
-    esp_netif_ip_info_t ip{};
-    auto n = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
-    if (n && esp_netif_get_ip_info(n, &ip) == ESP_OK) {
-        char a[16];
-        snprintf(a, sizeof(a), IPSTR, IP2STR(&ip.ip));
-        str("wifi_ip", a);
-        str("camera_url", (std::string("http://") + a + ":8081/frame").c_str());
+    boolean("wifi_connected", wifi.connected);
+    str("wifi_ssid", wifi.ssid.c_str());
+    str("wifi_ip", wifi.ip.c_str());
+    if (wifi.connected) {
+        str("camera_url", (std::string("http://") + wifi.ip + ":8081/frame").c_str());
     }
     num("frames", input_source_ == "camera" ? camera_frames_ : frames_);
     num("capture_monotonic_ms", input_source_ == "camera" && camera_frame_
@@ -765,8 +850,11 @@ void GestureService::Serve() {
 #ifdef GESTURE_MDNS_AVAILABLE
     if (mdns_init() == ESP_OK) {
         mdns_hostname_set(watcher_id_.c_str());
-        mdns_txt_item_t txt[] = {
-            {"id", watcher_id_.c_str()}, {"protocol", "6"}, {"model", "unknown"}, {"ready", "0"}, {"hold_protocol", "2"}};
+        mdns_txt_item_t txt[] = {{"id", watcher_id_.c_str()},
+                                 {"protocol", "6"},
+                                 {"model", "unknown"},
+                                 {"ready", "0"},
+                                 {"hold_protocol", "2"}};
         bool ok = mdns_service_add("Watcher servo controller", "_watcher-servo", "_tcp", 8888, txt,
                                    5) == ESP_OK;
         std::lock_guard<std::mutex> l(mutex_);
@@ -802,15 +890,16 @@ void GestureService::Serve() {
             if (parser.Feed(ch)) {
                 char capability[32] = {}, extra = 0;
                 in_addr parsed{};
-                int fields = sscanf(parser.Line(), "HELLO SERVO360 %17s %15s %u %lu %u %31s %c", mac, ip,
-                               &cap, &id, &version, capability, &extra);
+                int fields = sscanf(parser.Line(), "HELLO SERVO360 %17s %15s %u %lu %u %31s %c",
+                                    mac, ip, &cap, &id, &version, capability, &extra);
                 hold_protocol = fields == 6 && !strcmp(capability, "hold_protocol=2");
-                valid = (fields == 5 || hold_protocol) && cap <= 1 && version == 6 && strlen(mac) == 17 &&
-                        inet_pton(AF_INET, ip, &parsed) == 1;
+                valid = (fields == 5 || hold_protocol) && cap <= 1 && version == 6 &&
+                        strlen(mac) == 17 && inet_pton(AF_INET, ip, &parsed) == 1;
                 break;
             }
         }
-        if (!valid || !Send(fd, "WELCOME SERVO360 " + watcher_id_ + (hold_protocol ? " 6 hold_protocol=2\n" : " 6\n"))) {
+        if (!valid || !Send(fd, "WELCOME SERVO360 " + watcher_id_ +
+                                    (hold_protocol ? " 6 hold_protocol=2\n" : " 6\n"))) {
             close(fd);
             continue;
         }
@@ -820,16 +909,24 @@ void GestureService::Serve() {
             until = Now() + 1500;
             while (int32_t(until - Now()) > 0 && !ready) {
                 char ch;
-                if (recv(fd, &ch, 1, 0) <= 0) break;
-                if (parser.Feed(ch)) ready = std::string(parser.Line()) == "READY SERVO360 " + watcher_id_ + " hold_protocol=2";
+                if (recv(fd, &ch, 1, 0) <= 0)
+                    break;
+                if (parser.Feed(ch))
+                    ready = std::string(parser.Line()) ==
+                            "READY SERVO360 " + watcher_id_ + " hold_protocol=2";
             }
-            if (!ready) { close(fd); continue; }
+            if (!ready) {
+                close(fd);
+                continue;
+            }
         }
         {
             std::lock_guard<std::mutex> l(mutex_);
             client_connected_ = true;
             client_hold_protocol_ = hold_protocol ? 2 : 0;
-            clock_.Reset(); hold_.Cancel(); armed_at_ms_ = 0;
+            clock_.Reset();
+            hold_.Cancel();
+            armed_at_ms_ = 0;
             capable_ = cap;
             wanted_arm_ = outputs_enabled_ = false;
             profile_match_ = false;
@@ -860,16 +957,18 @@ void GestureService::Serve() {
                 command_epoch = power_.Epoch();
                 seq = ++command_sequence_;
                 profile = profile_;
-                const bool input_ready = input_source_ == "simulation" ||
+                const bool input_ready =
+                    input_source_ == "simulation" ||
                     (input_source_ == "camera" && camera_frame_ &&
                      uint32_t(started - camera_frame_->captured) < 800 &&
                      camera_observation_version_ == 2 && hold_.Healthy(started)) ||
                     (input_source_ == "onboard" && model_ready_ && vision_calibrated_ &&
                      local_capture_.Seen() && uint32_t(started - local_capture_.Captured()) < 800);
                 const bool ready = !shutting_down_ && client_connected_ && capable_ &&
-                    client_hold_protocol_ == 2 && profile_match_ && applied_mode_ == 0 &&
-                    clock_.Fresh(started) && input_ready;
-                if (continuous_output_.ShouldArm(ready, wanted_arm_, outputs_enabled_, arm_in_flight_)) {
+                                   client_hold_protocol_ == 2 && profile_match_ &&
+                                   applied_mode_ == 0 && clock_.Fresh(started) && input_ready;
+                if (continuous_output_.ShouldArm(ready, wanted_arm_, outputs_enabled_,
+                                                 arm_in_flight_)) {
                     StopLocked("auto_arm", false);
                     wanted_arm_ = true;
                 }
@@ -878,7 +977,8 @@ void GestureService::Serve() {
                 // An ARM can only follow a matching neutral receipt on this connection.
                 if (desired && !clock_.Fresh(started)) {
                     desired = false;
-                    if (armed) StopLocked("clock_anchor_timeout", true);
+                    if (armed)
+                        StopLocked("clock_anchor_timeout", true);
                 }
                 requested_.Tick(started);
                 uint32_t rem = requested_.Remaining(started);
@@ -907,12 +1007,15 @@ void GestureService::Serve() {
                     uint8_t mode = requested_.Mode();
                     if (input_source_ == "camera" && camera_observation_version_ == 2) {
                         mode = hold_.Motion(started);
-                        rem = camera_frame_ ? hold_.MotionRemaining(started, camera_frame_->captured) : 0;
+                        rem = camera_frame_
+                                  ? hold_.MotionRemaining(started, camera_frame_->captured)
+                                  : 0;
                     }
                     rem = std::min<uint32_t>(rem, 600);
                     mode = ModeForRemainingLease(mode, rem, armed, desired);
                     uint32_t cutoff = 0;
-                    const bool deadline_ok = clock_.Map(started + (mode && rem ? rem : 600), started, cutoff);
+                    const bool deadline_ok =
+                        clock_.Map(started + (mode && rem ? rem : 600), started, cutoff);
                     mode = deadline_ok ? mode : 0;
                     command = {seq, mode, uint16_t(std::max<uint32_t>(100, rem))};
                     if (client_hold_protocol_ == 2 && deadline_ok) {
@@ -980,8 +1083,10 @@ void GestureService::Serve() {
                         std::lock_guard<std::mutex> l(mutex_);
                         outputs_enabled_ = armed;
                         if (armed && power_.Accept(command_epoch) && wanted_arm_) {
-                            armed_at_ms_ = Now(); hold_.ArmEpoch(armed_at_ms_);
-                            requested_.Disconnect(); test_active_ = false;
+                            armed_at_ms_ = Now();
+                            hold_.ArmEpoch(armed_at_ms_);
+                            requested_.Disconnect();
+                            test_active_ = false;
                             ++intent_sequence_;
                         }
                         if (!armed)
@@ -1008,7 +1113,8 @@ void GestureService::Serve() {
                             for (int c = 0; c < 3; ++c)
                                 pulse_us_[c] = a.pulse_us[c];
                             client_uptime_ = a.uptime_ms;
-                            if (kind == MODE && power_.Accept(command_epoch)) clock_.Acknowledge(a.uptime_ms, last_ack_ms_);
+                            if (kind == MODE && power_.Accept(command_epoch))
+                                clock_.Acknowledge(a.uptime_ms, last_ack_ms_);
                             ++ack_count_;
                             acknowledged = true;
                         }
@@ -1025,7 +1131,9 @@ void GestureService::Serve() {
             client_connected_ = false;
             outputs_enabled_ = wanted_arm_ = profile_match_ = false;
             StopLocked("link_lost", true);
-            clock_.Reset(); client_hold_protocol_ = 0; armed_at_ms_ = 0;
+            clock_.Reset();
+            client_hold_protocol_ = 0;
+            armed_at_ms_ = 0;
             arm_in_flight_ = false;
         }
     }
@@ -1097,12 +1205,19 @@ void GestureService::CameraHttpServe() {
             "\r\nX-Frame-Height: " + std::to_string(frame->height) + "\r\n\r\n";
         uint32_t sending = Now();
         bool active;
-        { std::lock_guard<std::mutex> l(mutex_); active = power_.Accept(frame_epoch); }
+        {
+            std::lock_guard<std::mutex> l(mutex_);
+            active = power_.Accept(frame_epoch);
+        }
         if (active && Send(fd, header)) {
             size_t offset = 0;
             while (offset < frame->jpeg.size() && uint32_t(Now() - sending) < 500) {
-                { std::lock_guard<std::mutex> l(mutex_); active = power_.Accept(frame_epoch); }
-                if (!active) break;
+                {
+                    std::lock_guard<std::mutex> l(mutex_);
+                    active = power_.Accept(frame_epoch);
+                }
+                if (!active)
+                    break;
                 int count = send(fd, frame->jpeg.data() + offset,
                                  std::min<size_t>(4096, frame->jpeg.size() - offset), 0);
                 if (count <= 0)
@@ -1128,7 +1243,10 @@ void GestureService::HttpServe() {
         if (fd < 0)
             continue;
         uint32_t request_epoch;
-        { std::lock_guard<std::mutex> l(mutex_); request_epoch = power_.Epoch(); }
+        {
+            std::lock_guard<std::mutex> l(mutex_);
+            request_epoch = power_.Epoch();
+        }
         Timeout(fd, 250);
         std::string request;
         char bytes[256];
@@ -1205,7 +1323,8 @@ void GestureService::HttpServe() {
         {
             std::lock_guard<std::mutex> l(mutex_);
             power_allowed = PowerRequestAllowed(power_.State(), path) &&
-                ((!strcmp(path, "/stop") || !strcmp(path, "/suspend")) || power_.Accept(request_epoch));
+                            ((!strcmp(path, "/stop") || !strcmp(path, "/suspend")) ||
+                             power_.Accept(request_epoch));
         }
         if (!power_allowed) {
             Reply(fd, 409, "{\"error\":\"power_not_active\"}");
@@ -1227,9 +1346,10 @@ void GestureService::HttpServe() {
                 uint32_t generation = 0;
                 ok = SwitchSource(source->valuestring, &generation, request_epoch);
                 if (ok)
-                    source_reply = "{\"ok\":true,\"armed\":false,\"disarm_requested\":true,\"source\":\"" +
-                                   std::string(source->valuestring) + "\",\"stop_generation\":" +
-                                   std::to_string(generation) + "}";
+                    source_reply =
+                        "{\"ok\":true,\"armed\":false,\"disarm_requested\":true,\"source\":\"" +
+                        std::string(source->valuestring) +
+                        "\",\"stop_generation\":" + std::to_string(generation) + "}";
             }
         } else if (o && !strcmp(path, "/gesture")) {
             auto* g = cJSON_GetObjectItemCaseSensitive(o, "gesture");
@@ -1251,13 +1371,17 @@ void GestureService::HttpServe() {
                     auto* confirm = cJSON_GetObjectItemCaseSensitive(o, "confirmed_this_frame");
                     auto* hand = cJSON_GetObjectItemCaseSensitive(o, "hand_present");
                     ObservationKind kind;
-                    if (!strcmp(s->valuestring, "camera") && Number(o, "observation_version", 2, 2, v) &&
-                        cJSON_IsString(state) && ParseObservation(state->valuestring, kind) &&
-                        cJSON_IsBool(confirm) && cJSON_IsBool(hand) &&
+                    if (!strcmp(s->valuestring, "camera") &&
+                        Number(o, "observation_version", 2, 2, v) && cJSON_IsString(state) &&
+                        ParseObservation(state->valuestring, kind) && cJSON_IsBool(confirm) &&
+                        cJSON_IsBool(hand) &&
                         Number(o, "confirmation_age_ms", 0, 2500, confirm_age))
                         ok = SetInput(g->valuestring, s->valuestring, lease, session, frame, age, 2,
-                                      kind, cJSON_IsTrue(confirm), cJSON_IsTrue(hand), confirm_age, request_epoch);
-                } else ok = SetInput(g->valuestring, s->valuestring, lease, session, frame, age, 0, ObservationKind::Unrecognized, false, false, 0, request_epoch);
+                                      kind, cJSON_IsTrue(confirm), cJSON_IsTrue(hand), confirm_age,
+                                      request_epoch);
+                } else
+                    ok = SetInput(g->valuestring, s->valuestring, lease, session, frame, age, 0,
+                                  ObservationKind::Unrecognized, false, false, 0, request_epoch);
             }
         } else if (o && !strcmp(path, "/camera/activity")) {
             auto* s = cJSON_GetObjectItemCaseSensitive(o, "session_id");
@@ -1270,8 +1394,8 @@ void GestureService::HttpServe() {
             }
         } else if (o && !strcmp(path, "/onboard/calibrate")) {
             std::lock_guard<std::mutex> l(mutex_);
-            if (power_.Accept(request_epoch) && owner_.Accept("onboard") && model_ready_ && observed_.hand_count == 1 &&
-                uint32_t(Now() - observed_.captured_ms) < 800) {
+            if (power_.Accept(request_epoch) && owner_.Accept("onboard") && model_ready_ &&
+                observed_.hand_count == 1 && uint32_t(Now() - observed_.captured_ms) < 800) {
                 auto& hand = observed_.hands[0];
                 onboard::Features f;
                 if (hand.side != onboard::Side::Unknown &&
@@ -1289,29 +1413,37 @@ void GestureService::HttpServe() {
             }
         } else if (o && !strcmp(path, "/servo/arm")) {
             auto* enabled = cJSON_GetObjectItemCaseSensitive(o, "enabled");
-            auto* expected_generation = cJSON_GetObjectItemCaseSensitive(o, "expected_stop_generation");
+            auto* expected_generation =
+                cJSON_GetObjectItemCaseSensitive(o, "expected_stop_generation");
             auto* expected_source = cJSON_GetObjectItemCaseSensitive(o, "expected_source");
             if (cJSON_IsBool(enabled)) {
                 std::lock_guard<std::mutex> l(mutex_);
                 bool e = cJSON_IsTrue(enabled);
                 ArmStopExpectation expected;
                 expected.guarded = expected_generation || expected_source;
-                expected.valid = wifi_camera::UInt(o, "expected_stop_generation", expected.generation) &&
-                                 cJSON_IsString(expected_source);
-                const bool barrier_ok = ArmStopBarrierAllows(e, expected, stop_generation_,
+                expected.valid =
+                    wifi_camera::UInt(o, "expected_stop_generation", expected.generation) &&
+                    cJSON_IsString(expected_source);
+                const bool barrier_ok = ArmStopBarrierAllows(
+                    e, expected, stop_generation_,
                     cJSON_IsString(expected_source) && owner_.Accept(expected_source->valuestring));
                 const uint32_t now = Now();
-                bool camera_ready = owner_.Accept("camera") && camera_observation_version_ == 2 &&
-                    camera_frame_ && uint32_t(now - camera_frame_->captured) < 800 && hold_.Healthy(now);
-                ok = power_.Accept(request_epoch) && (!e || (barrier_ok && !shutting_down_ && (owner_.AllowsServoConfiguration() || camera_ready) &&
-                           profile_match_ && capable_ && client_hold_protocol_ == 2 &&
-                           clock_.Fresh(now) && client_connected_ && !arm_in_flight_));
+                bool camera_ready =
+                    owner_.Accept("camera") && camera_observation_version_ == 2 && camera_frame_ &&
+                    uint32_t(now - camera_frame_->captured) < 800 && hold_.Healthy(now);
+                ok = power_.Accept(request_epoch) &&
+                     (!e || (barrier_ok && !shutting_down_ &&
+                             (owner_.AllowsServoConfiguration() || camera_ready) &&
+                             profile_match_ && capable_ && client_hold_protocol_ == 2 &&
+                             clock_.Fresh(now) && client_connected_ && !arm_in_flight_));
                 if (ok) {
                     continuous_output_.SetEnabled(e);
-                    if (!e) ++stop_generation_;
+                    if (!e)
+                        ++stop_generation_;
                     ++intent_sequence_;
                     wanted_arm_ = e;
-                    requested_.Disconnect(); hold_.Cancel();
+                    requested_.Disconnect();
+                    hold_.Cancel();
                     test_active_ = false;
                     stop_reason_ = e ? "arming" : "disarm";
                 }
@@ -1321,8 +1453,8 @@ void GestureService::HttpServe() {
             if (Number(o, "channel", 1, 3, channel) && Number(o, "pulse_us", 1000, 2000, pulse) &&
                 Number(o, "duration_ms", 100, 500, duration)) {
                 std::lock_guard<std::mutex> l(mutex_);
-                if (power_.Accept(request_epoch) && !shutting_down_ && outputs_enabled_ && wanted_arm_ && profile_match_ &&
-                    owner_.AllowsServoConfiguration()) {
+                if (power_.Accept(request_epoch) && !shutting_down_ && outputs_enabled_ &&
+                    wanted_arm_ && profile_match_ && owner_.AllowsServoConfiguration()) {
                     ++intent_sequence_;
                     test_channel_ = channel;
                     test_pulse_ = pulse;
@@ -1352,8 +1484,8 @@ void GestureService::HttpServe() {
             if (valid && p.Valid()) {
                 std::lock_guard<std::mutex> l(mutex_);
                 requested_.Tick(Now());
-                if (power_.Accept(request_epoch) && owner_.AllowsServoConfiguration() && !wanted_arm_ && !outputs_enabled_ &&
-                    !arm_in_flight_ && !requested_.Mode()) {
+                if (power_.Accept(request_epoch) && owner_.AllowsServoConfiguration() &&
+                    !wanted_arm_ && !outputs_enabled_ && !arm_in_flight_ && !requested_.Mode()) {
                     profile_ = p;
                     requested_.Configure(p);
                     profile_match_ = false;
@@ -1381,18 +1513,17 @@ void GestureService::DisplayLoop() {
     while (true) {
         DisplaySnapshot snapshot = DisplayState();
         // Network and battery reads never run under the control mutex.
-        esp_netif_ip_info_t ip{};
-        auto* netif = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
-        if (netif && esp_netif_get_ip_info(netif, &ip) == ESP_OK && ip.ip.addr) {
-            char text[32];
-            snprintf(text, sizeof(text), IPSTR, IP2STR(&ip.ip));
-            snapshot.wifi_ip = text;
-            snapshot.wifi_connected = true;
-        }
+        const auto wifi = ReadWifiConnection();
+        snapshot.wifi_ip = wifi.ip;
+        snapshot.wifi_ssid = wifi.ssid;
+        snapshot.wifi_connected = wifi.connected;
         if (WatcherShowGesturePresentation(snapshot)) {
             std::lock_guard<std::mutex> l(mutex_);
-            emotion_ = snapshot.mode == 1 ? "angry" : snapshot.mode == 2 ? "relaxed" :
-                       snapshot.mode == 3 ? "happy" : snapshot.connected ? "neutral" : "thinking";
+            emotion_ = snapshot.mode == 1   ? "angry"
+                       : snapshot.mode == 2 ? "relaxed"
+                       : snapshot.mode == 3 ? "happy"
+                       : snapshot.connected ? "neutral"
+                                            : "thinking";
         }
         vTaskDelay(pdMS_TO_TICKS(250));
     }

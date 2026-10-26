@@ -30,6 +30,8 @@ def eligible(relative):
     parts = PurePosixPath(relative.as_posix()).parts
     if not parts or '..' in parts or relative.is_absolute(): return False
     name = parts[-1]
+    # 系统目录元数据可能包含本机路径及文件名，不属于可发布源码。
+    if name in {'.DS_Store', 'Thumbs.db', 'desktop.ini'} or name.startswith('._'): return False
     if any(part in {'__pycache__', '.git', '.venv', '.cache', 'managed_components', 'build'} for part in parts): return False
     if name.endswith(('.pyc', '.log', '.bin', '.img', '.zip', '.elf', '.task', '.map')): return False
     # Unit-test credentials are synthetic and required by the black-board stubs.

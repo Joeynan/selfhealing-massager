@@ -18,12 +18,12 @@
       "sha256": "e9e0e46aee96e7f8846b00c5d4dd0f6e601f3bc16f744238308122e9bb66ab4e"
     },
     "README.md": {
-      "bytes": 5633,
-      "sha256": "e9e0deb74623a4fa7fabd1c1a189534af06029480f4198730aa813857f55256a"
+      "bytes": 6265,
+      "sha256": "445a8f68ea7e97b4b5f1f4da5c44a2a86032077c70562d2829ad264999c677f1"
     },
     "docs/GitHub上传指南.md": {
-      "bytes": 5116,
-      "sha256": "627d42841afaf7e23e9a867ce69d4d0542fbfc137ee3754870e112be33d095e7"
+      "bytes": 5328,
+      "sha256": "82ae7ebbc0939ade336c3c2eff5caf5a64d230b533843d2c68a2fcfee2588635"
     },
     "docs/交付验证/GitHub发布记录.json": {
       "bytes": 1104,
@@ -45,17 +45,21 @@
       "bytes": 5408,
       "sha256": "fe493460e37134a3aaaf3bbc0acc86614a21731306ceb44883a3d204027669b5"
     },
+    "docs/交付验证/公开更新记录.md": {
+      "bytes": 1788,
+      "sha256": "bde3d471d9ff88004998cf055fdfc66ca94b2fa012c95cfe4f33c07fbb75248d"
+    },
     "docs/交付验证/源码提交清单.md": {
       "bytes": 2052,
       "sha256": "7b4c7dd27ceb783f062364ed2b95c8e8be53ee624f0bf00eb7249e36da3bfabb"
     },
     "docs/使用指南.md": {
-      "bytes": 26084,
-      "sha256": "2989f5d154dece9430eabc3ad9c22a0e842a6c27df4e404f16ac66102bd33694"
+      "bytes": 27101,
+      "sha256": "197a2a8c037891ebd165774f7d7df73fcda1f3d8a6b76c898abb492d2d2f6015"
     },
     "docs/第三方来源与许可.md": {
-      "bytes": 3987,
-      "sha256": "7ba845268e28b76d4392b2c11362840ff6f0e2d446f78cb1d4639a35d0402ae1"
+      "bytes": 4044,
+      "sha256": "921e27c5aa00b4c2552eebe89d43ba9c08235aa82f896fd40ad57f0124c97054"
     },
     "docs/验收清单.md": {
       "bytes": 4393,
@@ -66,8 +70,8 @@
       "sha256": "aa5cc8cc83463483cc6c65f51c7f574323d42ec18b0cb43b2be33ecf66824380"
     },
     "outputs/Watcher控制台/app.js": {
-      "bytes": 48595,
-      "sha256": "d2aa136abb6c9f7b584aa89e9db28767321a39c40fe567ac953013c1cea24307"
+      "bytes": 48768,
+      "sha256": "0c2630e8a46f42eac08917bd4303ad1100d5aae18a87aa6278f71095a13fae5b"
     },
     "outputs/Watcher控制台/bridge.py": {
       "bytes": 9832,
@@ -206,8 +210,8 @@
       "sha256": "92908724123d414248122558020d45a1cb5fb407dbe5a548e605df8c42f5d815"
     },
     "outputs/Watcher控制台/firmware/watcher-service/gesture_service.cc": {
-      "bytes": 65669,
-      "sha256": "af9489f9509cbf4bbadbe61b9f31ee10eae141cb09ace35a9aa36f6a30ac93b0"
+      "bytes": 68406,
+      "sha256": "bf265224120150a4992da71780fe3a51985f383e8e60d614e1509618fe1c84f9"
     },
     "outputs/Watcher控制台/firmware/watcher-service/gesture_service.h": {
       "bytes": 4248,
@@ -218,12 +222,12 @@
       "sha256": "0ead56e54a123ad42c8e85d7be78c6e5e5ff2f0aacb4eaaed14e18e845f5ea16"
     },
     "outputs/Watcher控制台/firmware/watcher-service/gesture_ui.h": {
-      "bytes": 1445,
-      "sha256": "27442dac574b9620400cff2ba617f8483dd0a7af4be58cdf1d1efe229b7b5929"
+      "bytes": 1977,
+      "sha256": "a50908dd1ccabf8cd7e6491e8479d7ce91003a249e7f5e57af78105fcf84b4dd"
     },
     "outputs/Watcher控制台/firmware/watcher-service/gesture_ui_text.h": {
-      "bytes": 1666,
-      "sha256": "2fade3f1f8d873e1f5adfd2048ad7ac6e7f9dae824137ed65bfebf4f966fdf9c"
+      "bytes": 2002,
+      "sha256": "5cb8eb0bc59549eb0c3614a75e9a6ae02448de23f06f40f108c8795a82d0bdf7"
     },
     "outputs/Watcher控制台/firmware/watcher-service/landmark_decoder.h": {
       "bytes": 7490,
@@ -270,8 +274,8 @@
       "sha256": "6d4d1c3817e084634389f2438ace4ef1a31b9103871fefb9611050c13192f508"
     },
     "outputs/Watcher控制台/firmware/watcher-service/sensecap_watcher.cc": {
-      "bytes": 40912,
-      "sha256": "b36db51e47c9d30172874127752b0b61a2c6020ed14e29e7a1cc51a626238e51"
+      "bytes": 41833,
+      "sha256": "e8afae7fc575b59a883415cf96d9ebc6126c377382bacbb1ffa22367b39f8cbc"
     },
     "outputs/Watcher控制台/firmware/watcher-service/servo_profile.h": {
       "bytes": 1329,
@@ -308,6 +312,10 @@
     "outputs/Watcher控制台/firmware/watcher-service/wifi_frame_decoder.h": {
       "bytes": 3092,
       "sha256": "134c4ab465372c0d1b664424e0feff06646d4f7170c65758073014655a36873a"
+    },
+    "outputs/Watcher控制台/firmware/watcher-service/wifi_network_preference.cc": {
+      "bytes": 1956,
+      "sha256": "dfc3a073cbd87fe4e90f8aaccf128a8913e6cf99c90aff249bf0934c4740966e"
     },
     "outputs/Watcher控制台/firmware/watcher-service/wifi_settings.example.h": {
       "bytes": 668,
@@ -366,8 +374,8 @@
       "sha256": "435eabe0e86ea2b14a58d4a0391bae1b84d4d49828fe1b88e2bf493c582773cd"
     },
     "outputs/Watcher控制台/index.html": {
-      "bytes": 14339,
-      "sha256": "ec846c429eefc1faa182c3e45d36f29455b9506c617402ae0fe527e7d4af5a47"
+      "bytes": 14397,
+      "sha256": "281a7a2c570d26ce2f4885fddb6b41b35c030bd3798e70bb34de1ff446c49044"
     },
     "outputs/Watcher控制台/install_runtime.py": {
       "bytes": 6877,
@@ -435,7 +443,7 @@
     },
     "outputs/Watcher控制台/tests/gesture_ui_text_test.cpp": {
       "bytes": 1276,
-      "sha256": "e5bd317a7b01caf16634384baffdfaa572f93475232893cbf851d9422ec33027"
+      "sha256": "675385c2fe00dec13ca610f5e661cdd87ebec3791388f0f087d9dcd5c6d015b2"
     },
     "outputs/Watcher控制台/tests/landmark_decoder_test.cpp": {
       "bytes": 2921,
@@ -617,6 +625,10 @@
       "bytes": 2285,
       "sha256": "377efdc375778967d0de85963a3afa7567e24f6451bfbbb9cdfb9de6bf870ec5"
     },
+    "outputs/Watcher控制台/tests/test_wifi_name_ui.cjs": {
+      "bytes": 1532,
+      "sha256": "df65ea34ec71464c9a55430ce743cadeed4a7f74bc10526f500fc7854bacb68e"
+    },
     "outputs/Watcher控制台/tests/test_wifi_runtime.py": {
       "bytes": 1690,
       "sha256": "33fdbfc07e226b379c71d9bb9cbb0cc93b8358a3308daf400773e5779f65e2d6"
@@ -629,6 +641,10 @@
       "bytes": 2825,
       "sha256": "14742b464c88fbd9f621a1aa724afd6547f5e3d904b3571450bdc1580dabbb5a"
     },
+    "outputs/Watcher控制台/tests/wifi_data_test.cpp": {
+      "bytes": 392,
+      "sha256": "2ed5cb216c748cfd5b985bdc519ff524d3ecf0238e6580f701965cbaceb15bf2"
+    },
     "outputs/Watcher控制台/tests/wifi_decoder_test.cpp": {
       "bytes": 1211,
       "sha256": "df646cb16a79aa41a73fb8470f91e4b5862870680e1911cc32cb467965355462"
@@ -636,6 +652,10 @@
     "outputs/Watcher控制台/tests/wifi_frame_test.cpp": {
       "bytes": 1645,
       "sha256": "0d7a30aadb745238994b54ca8b53b8733ae718a1efea6c0634b0723bcc156e02"
+    },
+    "outputs/Watcher控制台/tests/wifi_name_test.cpp": {
+      "bytes": 648,
+      "sha256": "4210288644c7f09da8e251c314a07aeaa225e6878d912639112106e3eb75378c"
     },
     "outputs/Watcher控制台/watcher_ui.css": {
       "bytes": 4409,
@@ -678,8 +698,8 @@
       "sha256": "16e50cc0c17b08eac4268730cd7f3093af2e531ae82d97ae104a118787da3350"
     },
     "releases/release-index.json": {
-      "bytes": 1497,
-      "sha256": "8ea20f17dc804ff0bf226c7d4b6cdc29c1456c6b7f3e8aae1aaa1024fa90e1ee"
+      "bytes": 1496,
+      "sha256": "df234d934c72917fd25496e37377839cd7a5ff883596d33fd2ec99a1ccd3e197"
     },
     "tools/backup_watcher.py": {
       "bytes": 2535,
@@ -702,8 +722,8 @@
       "sha256": "70f8d4ce7ec9a44ca9d92d9496bc2ea57fb45d370c33f761aa0e33a9582ec2c7"
     },
     "tools/package_team.py": {
-      "bytes": 16041,
-      "sha256": "8aceaa0b7c648de9c2f52228026ecf35e861619682897328c1610fd0db27d5f8"
+      "bytes": 16231,
+      "sha256": "bb49576b40958705e3996459c71a001fce427157cb0fde05d13039f64087f428"
     },
     "tools/patches/idf-6.0.1-utf8-paths.patch": {
       "bytes": 708,
@@ -766,8 +786,8 @@
       "sha256": "1a221e73725ff643872eda87b18c961d185abac7e8678da9805110f5d9012eaa"
     },
     "tools/tests/test_team_package.py": {
-      "bytes": 11627,
-      "sha256": "333e08e5f522d2e15ff30be91b8bbb4b2958a4c7100c7004f962ee9b4b5049b2"
+      "bytes": 11801,
+      "sha256": "463378650c75e35f7d460d42b986e5c6b046b0c0a9b75fa2b712760aca60059e"
     },
     "tools/tests/test_team_runtime.py": {
       "bytes": 20450,
@@ -776,6 +796,10 @@
     "tools/tests/test_watcher_flash_ports.py": {
       "bytes": 3325,
       "sha256": "7cb8033bde8adc5ce38bccd8193920f57b01fd9a601275917b94483708f1cb88"
+    },
+    "tools/tests/test_wifi_network_preference.py": {
+      "bytes": 5477,
+      "sha256": "d92b8f36c4c11e90331f1fc7eb49f9a6fbfc260355080fc68a7ad8909c3eefd4"
     },
     "tools/tests/test_windows_text.py": {
       "bytes": 2588,
@@ -1026,8 +1050,8 @@
       "sha256": "d5791528bc41b507dd9b3703da1992190c8436559f2b0afdcc7e78acabdc5c32"
     },
     "work/xiaozhi-esp32/main/CMakeLists.txt": {
-      "bytes": 66371,
-      "sha256": "8aedd91137d1731de80fee2493529c212906de45c112da577ef064ed9f0bd154"
+      "bytes": 66704,
+      "sha256": "adf8a94762e9ec824f13edabad160d184b04b26aa2ca1c21c23d97e627d05e8a"
     },
     "work/xiaozhi-esp32/main/Kconfig.projbuild": {
       "bytes": 44781,
@@ -6022,8 +6046,8 @@
       "sha256": "92908724123d414248122558020d45a1cb5fb407dbe5a548e605df8c42f5d815"
     },
     "work/xiaozhi-esp32/main/boards/sensecap-watcher-gesture/gesture_service.cc": {
-      "bytes": 65669,
-      "sha256": "af9489f9509cbf4bbadbe61b9f31ee10eae141cb09ace35a9aa36f6a30ac93b0"
+      "bytes": 68406,
+      "sha256": "bf265224120150a4992da71780fe3a51985f383e8e60d614e1509618fe1c84f9"
     },
     "work/xiaozhi-esp32/main/boards/sensecap-watcher-gesture/gesture_service.h": {
       "bytes": 4248,
@@ -6034,12 +6058,12 @@
       "sha256": "0ead56e54a123ad42c8e85d7be78c6e5e5ff2f0aacb4eaaed14e18e845f5ea16"
     },
     "work/xiaozhi-esp32/main/boards/sensecap-watcher-gesture/gesture_ui.h": {
-      "bytes": 1445,
-      "sha256": "27442dac574b9620400cff2ba617f8483dd0a7af4be58cdf1d1efe229b7b5929"
+      "bytes": 1977,
+      "sha256": "a50908dd1ccabf8cd7e6491e8479d7ce91003a249e7f5e57af78105fcf84b4dd"
     },
     "work/xiaozhi-esp32/main/boards/sensecap-watcher-gesture/gesture_ui_text.h": {
-      "bytes": 1666,
-      "sha256": "2fade3f1f8d873e1f5adfd2048ad7ac6e7f9dae824137ed65bfebf4f966fdf9c"
+      "bytes": 2002,
+      "sha256": "5cb8eb0bc59549eb0c3614a75e9a6ae02448de23f06f40f108c8795a82d0bdf7"
     },
     "work/xiaozhi-esp32/main/boards/sensecap-watcher-gesture/landmark_decoder.h": {
       "bytes": 7490,
@@ -6082,8 +6106,8 @@
       "sha256": "a41916c675c93251a9d103b22e92a8c261dabc6462639d7bd3b5cc3c43e51468"
     },
     "work/xiaozhi-esp32/main/boards/sensecap-watcher-gesture/sensecap_watcher.cc": {
-      "bytes": 40912,
-      "sha256": "b36db51e47c9d30172874127752b0b61a2c6020ed14e29e7a1cc51a626238e51"
+      "bytes": 41833,
+      "sha256": "e8afae7fc575b59a883415cf96d9ebc6126c377382bacbb1ffa22367b39f8cbc"
     },
     "work/xiaozhi-esp32/main/boards/sensecap-watcher-gesture/servo_profile.h": {
       "bytes": 1329,
@@ -6128,6 +6152,10 @@
     "work/xiaozhi-esp32/main/boards/sensecap-watcher-gesture/wifi_frame_decoder.h": {
       "bytes": 3092,
       "sha256": "134c4ab465372c0d1b664424e0feff06646d4f7170c65758073014655a36873a"
+    },
+    "work/xiaozhi-esp32/main/boards/sensecap-watcher-gesture/wifi_network_preference.cc": {
+      "bytes": 1956,
+      "sha256": "dfc3a073cbd87fe4e90f8aaccf128a8913e6cf99c90aff249bf0934c4740966e"
     },
     "work/xiaozhi-esp32/main/boards/sensecap-watcher-gesture/wifi_settings.example.h": {
       "bytes": 668,
@@ -7870,8 +7898,8 @@
       "sha256": "a2b8d5f4c729fdf15e5f8366b2027cc9561bfe0f298ac2a5951f603cf1a0ad35"
     }
   },
-  "file_count": 1967,
-  "bytes": 11004129,
+  "file_count": 1974,
+  "bytes": 11029775,
   "issues": [],
   "hardware_access": false
 }

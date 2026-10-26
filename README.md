@@ -12,13 +12,13 @@ Watcher 摄像头 → Wi-Fi → 电脑提取 21 手节点并识别
 
 小智可以使用电池、不插电脑 USB；**电脑仍须运行识别服务**。当前没有交付可独立运行的板上 21 节点模型。网页不需要 Node.js 或 npm。
 
-私有仓库：[Joeynan/selfhealing-massager](https://github.com/Joeynan/selfhealing-massager)；小智应用与回滚附件：[Watcher v9 Release](https://github.com/Joeynan/selfhealing-massager/releases/tag/watcher-v9-wheel)。使用者需先取得仓库访问权限。
+项目仓库：[Joeynan/selfhealing-massager](https://github.com/Joeynan/selfhealing-massager)；小智应用与回滚附件：[Watcher v9 Release](https://github.com/Joeynan/selfhealing-massager/releases/tag/watcher-v9-wheel)。公开后可直接浏览、下载或克隆；提交修改仍需相应权限。
 
 ## 从这里开始
 
 1. 阅读 [使用指南](docs/使用指南.md)，先准备 Python 3.12、可互通的 Wi-Fi 和两块现有设备。
 2. 安装项目环境，按指南填写本地地址；首次只在舵机断电时验证显示和摄像头。
-3. 需要烧录已验证应用时，从私有仓库 Release 取得附件并按 [发布索引](releases/release-index.json) 校验。源码下载不包含应用镜像、SDK 或编译器。
+3. 需要烧录已验证应用时，从仓库 Release 取得附件并按 [发布索引](releases/release-index.json) 校验。源码下载不包含应用镜像、SDK 或编译器。
 4. 代码修改后按 [验收清单](docs/验收清单.md) 分别记录自动检查和实物测试。
 
 上传者使用 [GitHub 上传指南](docs/GitHub上传指南.md)，先导出可提交源码，再在导出目录建立 Git 仓库。第三方来源与许可证见 [许可说明](docs/第三方来源与许可.md)。
@@ -28,6 +28,12 @@ Watcher 摄像头 → Wi-Fi → 电脑提取 21 手节点并识别
 电脑手节点与手势规则位于 `outputs/Watcher控制台/camera`：`landmark_server.py` 提取节点，`gesture_rules.py` 判断手势，`wifi_camera.py` 获取 Wi-Fi 画面。它们由 Python 运行，不烧入设备。
 
 小智代码在 `work/xiaozhi-esp32/main/boards/sensecap-watcher-gesture`，使用固定 **ESP-IDF 6.0.1** 编译、根目录烧录入口调用 **esptool 5.4.0** 上传；**Arduino IDE 2** 用于黑板 `.ino`，选择 **ESP8266 Core 3.1.2 / NodeMCU 1.0**。具体源码、库、Wi-Fi 修改及两平台步骤见 [使用指南](docs/使用指南.md)。
+
+## 最新源码更新（2026-10-26）
+
+- 小智按最近明确选择的 Wi-Fi 扫描全部信道，避免旧网络信号更强或信道缓存导致连错网络。
+- 数据页和控制台显示当前 Wi-Fi 名称；串口换网、小黑板网络配置及 IP 修改方法见 [使用指南第 7 节](docs/使用指南.md#7-wi-fi密码与-ip-怎么改)。
+- 本次同步的是最新源码，原 v9／v8 Release 应用保持原文件；该旧应用不自动包含后续源码修复。更新固件请按指南从源码构建，并使用 `--build-dir` 校验及烧录。
 
 ## 现有行为
 
@@ -64,4 +70,4 @@ Watcher 摄像头 → Wi-Fi → 电脑提取 21 手节点并识别
 
 本地后续迭代以 `selfhealing 按摩仪` 为唯一活动工程；原 Documents 项目及旧构建目录仅作备份。不要把已下载的整套本地工程直接 `git add .`。可提交文件由 `tools/package_team.py` 的白名单和检查程序决定，私有 Wi-Fi、设备备份及含密码的两板构建镜像留在本机。
 
-构建产物不会自动替换已验证 v9 发布镜像。自行修改的小智应用使用 `--build-dir` 接受同样的身份与分区检查；共享新版本时另建发布清单并记录设备验收，原 v9 / v8 附件保持不变。当前源码和原样固件附件已上传私有 GitHub；本次上传没有烧录设备或测试舵机。最新指南与源码改动验证见 [使用指南更新记录](docs/交付验证/使用指南更新记录.md)，首次上传见 [GitHub 发布记录](docs/交付验证/GitHub发布记录.md)；逐文件校验见导出目录根的 `source-manifest.json`。Windows 和使用者设备结果需按清单填写。
+构建产物不会自动替换已验证 v9 发布镜像。自行修改的小智应用使用 `--build-dir` 接受同样的身份与分区检查；共享新版本时另建发布清单并记录设备验收，原 v9 / v8 附件保持不变。源码与原样固件附件通过 GitHub 交付；私有网络配置不会随源码公开。发布不会自动给设备烧录或测试舵机。最新指南与源码改动验证见 [使用指南更新记录](docs/交付验证/使用指南更新记录.md)，首次上传见 [GitHub 发布记录](docs/交付验证/GitHub发布记录.md)；逐文件校验见导出目录根的 `source-manifest.json`。Windows 和使用者设备结果需按清单填写。

@@ -1,6 +1,6 @@
 # GitHub 上传指南
 
-当前源码已上传私有仓库 [Joeynan/selfhealing-massager](https://github.com/Joeynan/selfhealing-massager)，原样 v9 应用与 v8 回滚附件在 [Watcher v9 Release](https://github.com/Joeynan/selfhealing-massager/releases/tag/watcher-v9-wheel)。使用者需要仓库访问权限；私有仓库也不保存真实 Wi-Fi 密码或设备备份。以下保留首次上传和后续更新的方法，已有项目更新时使用当前仓库，不重复创建。
+当前源码通过项目仓库交付： [Joeynan/selfhealing-massager](https://github.com/Joeynan/selfhealing-massager)，原样 v9 应用与 v8 回滚附件在 [Watcher v9 Release](https://github.com/Joeynan/selfhealing-massager/releases/tag/watcher-v9-wheel)。仓库公开后，浏览和下载无需邀请；推送修改仍需写入权限。公开或私有仓库都不保存真实 Wi-Fi 密码或设备备份。以下保留首次上传和后续更新的方法，已有项目更新时使用当前仓库，不重复创建。
 
 ## 1. 先导出待提交源码
 
@@ -16,11 +16,11 @@ Mac 可把 `python` 换为 `python3.12`，Windows 可用 `py -3.12`。目标必�
 
 - `source`：源码、入口、锁、示例、补丁、测试及说明，适合作为 Git 根。
 - `releases`：`selfhealing-watcher-v9.zip` 等附件，适合上传 Release，不加入源码提交。
-- `releases/release-index.json`：源码内的附件索引，记录版本、文件名、大小、SHA256 和已发布的私有下载地址。
+- `releases/release-index.json`：源码内的附件索引，记录版本、文件名、大小、SHA256 和已发布的下载地址。
 
 不要在整套完整工程直接 `git init` 或 `git add .`。SDK、编译器、venv、缓存、历史实验、照片、日志、NVS／EEPROM 与烧录前设备镜像均只留本地。黑板固件以及开启源码配网的小智构建可能含本地 Wi-Fi 密码。每位使用者在本机填写私有头文件后自行构建；这类构建镜像不提交、不共享为 Release。
 
-## 2. 建私有仓库并上传
+## 2. 上传源码与仓库可见性
 
 1. 登录 GitHub，新建私有仓库，例如 `selfhealing-massager`。首次建空仓库，不勾选初始化 README、许可证或 gitignore，避免与导出源码冲突。
 2. 进入刚导出的 `source` 目录，初始化 Git；这里的 `git add .` 仅针对已审计的导出内容：
@@ -39,7 +39,7 @@ Mac 可把 `python` 换为 `python3.12`，Windows 可用 `py -3.12`。目标必�
    ```
 
 3. 替换仓库 URL，不把个人访问令牌写入地址或脚本；使用 GitHub Desktop 或 Git 的认证流程。
-4. GitHub 仓库 Settings → Collaborators 中添加使用者；组织仓库按组织权限邀请。确认使用者可以访问源码及私有 Release。
+4. 本项目已存在，不重复建仓库。要公开时，先检查全部提交历史及 Release 附件，再到 Settings → General → Danger Zone → Change repository visibility 选择 Public。公开后任何人都可读取历史及下载附件；需要协作写入时仍在 Collaborators 邀请。
 
 如果上传前检查报告私有文件，即使它被 `.gitignore` 忽略也检查是否曾被 Git 跟踪；忽略规则不会自动移除已跟踪内容。先移出提交，必要时撤销暂存重新检查。如果真实凭据已推送，立即更换相应凭据并按 GitHub 的敏感数据处理说明处理历史。
 

@@ -1144,6 +1144,12 @@ if(NOT CMAKE_BUILD_EARLY_EXPANSION)
     target_compile_options(${COMPONENT_LIB} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-std=gnu++23>)
 endif()
 
+# Only Watcher's saved network selection constrains station scans; other boards
+# and the vendor component sources keep their original connection behavior.
+if(CONFIG_BOARD_TYPE_SENSECAP_WATCHER_GESTURE AND NOT CMAKE_BUILD_EARLY_EXPANSION)
+    target_link_options(${COMPONENT_LIB} INTERFACE "-Wl,--wrap=esp_wifi_scan_start")
+endif()
+
 # Use target_compile_definitions to define the reported board identity
 # If BOARD_NAME is empty, use BOARD_TYPE
 if(NOT BOARD_NAME)

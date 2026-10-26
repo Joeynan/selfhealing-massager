@@ -1,0 +1,22 @@
+'use strict';
+const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm');
+const base = fs.readFileSync(path.join(__dirname, 'test_v8_ui.cjs'), 'utf8');
+const additional = `
+assert(elements.has('watcher-wifi'), 'device panel must expose the reported Wi-Fi name');
+s=status();s.watcher.data.wifi_connected=true;s.watcher.data.wifi_ssid='TEST_NETWORK';render(s);
+assert.equal(elements.get('watcher-wifi').textContent,'TEST_NETWORK');
+s.watcher.data.wifi_ssid='<script>private network</script>';render(s);
+assert.equal(elements.get('watcher-wifi').textContent,'<script>private network</script>');
+assert.equal(elements.get('watcher-wifi').innerHTML,'','SSID must be text, never HTML');
+s=status();render(s);
+assert.equal(elements.get('watcher-wifi').textContent,'设备未回报','older firmware must not invent a network name');
+s.watcher.data.wifi_connected=false;s.watcher.data.wifi_ssid='old network';render(s);
+assert.equal(elements.get('watcher-wifi').textContent,'未连接');
+s.watcher.online=false;render(s);
+assert.equal(elements.get('watcher-wifi').textContent,'未知','offline status cannot retain the last SSID as current');
+s=status();s.watcher.data.wifi_ssid='TEST_NETWORK';render(s);
+sandbox.__app.disconnected('offline');
+assert.equal(elements.get('watcher-wifi').textContent,'未知');
+console.log('Reported Wi-Fi name, old firmware fallback, escaping and offline state: PASS');
+`;
+vm.runInNewContext(base + additional, {require, __dirname, __filename, console, AbortController, Blob, URL});
